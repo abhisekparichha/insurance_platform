@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/health-evaluation.json",
+  "title": "HealthProductEvaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["productRef", "scores", "overall", "version"],
+  "properties": {
+    "productRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["insurer", "planName", "variant"],
+      "properties": {
+        "insurer": { "type": "string", "minLength": 1 },
+        "planName": { "type": "string", "minLength": 1 },
+        "variant": { "type": ["string", "null"] }
+      }
+    },
+    "scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["parameter", "rating", "score", "rationale"],
+        "properties": {
+          "parameter": {
+            "type": "string",
+            "enum": [
+              "room_rent",
+              "pre_post",
+              "daycare",
+              "ayush",
+              "domiciliary",
+              "ncb",
+              "recharge",
+              "copay",
+              "cataract",
+              "waiting_periods",
+              "topup_friendliness"
+            ]
+          },
+          "rating": {
+            "type": "string",
+            "enum": ["Bad", "OK", "Good"]
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "errorMessage": "Scores must fall between 0 and 100."
+          },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "overall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weightedScore", "grade", "notes"],
+      "properties": {
+        "weightedScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "errorMessage": "Overall weighted score must be within 0 to 100."
+        },
+        "grade": {
+          "type": "string",
+          "enum": ["D", "C", "B", "A", "A+"]
+        },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "version": { "type": "string", "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$" }
+  }
+}

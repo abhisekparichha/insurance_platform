@@ -1,0 +1,110 @@
+{
+  "product": {
+    "insurer": "Acme Health Insurance",
+    "planName": "Acme Shield Health",
+    "variant": "Prime",
+    "uin": "ACMHLIPR2025V01",
+    "policyType": "Floater",
+    "isTopUp": false,
+    "geography": "IN"
+  },
+  "sumInsured": {
+    "baseSI": 1000000,
+    "currency": "INR",
+    "availableBands": [500000, 1000000, 1500000],
+    "unlimitedOneClaim": false
+  },
+  "deductible": {
+    "applies": false,
+    "type": null,
+    "amount": null,
+    "aggregateApplies": null
+  },
+  "roomRent": {
+    "limitType": "single_private_room",
+    "limitValue": null,
+    "icuLimitType": "no_cap",
+    "icuLimitValue": null,
+    "proportionateDeduction": "waived_with_addon",
+    "roomModifierOption": true
+  },
+  "hospitalization": {
+    "inpatient": "covered",
+    "daycare": "all",
+    "preHospDays": 60,
+    "postHospDays": 180,
+    "domiciliary": {
+      "covered": true,
+      "minDays": 2,
+      "negativeListPresent": false,
+      "notes": null
+    },
+    "ayush": {
+      "covered": true,
+      "limitType": "up_to_SI",
+      "limitValue": null
+    }
+  },
+  "transport": {
+    "roadAmbulanceLimit": 20000,
+    "airAmbulance": "optional",
+    "airAmbulanceLimit": 500000
+  },
+  "organDonor": {
+    "covered": true,
+    "notes": null
+  },
+  "bonuses": {
+    "ncb": {
+      "accrualPerYearPercent": 50,
+      "maxCapPercent": 150,
+      "claimImpact": "no_impact"
+    },
+    "recharge": {
+      "type": "unlimited",
+      "sameIllnessAllowed": true
+    }
+  },
+  "waitingPeriods": {
+    "initialDays": 30,
+    "specificAilmentsMonths": 24,
+    "pedMonths": 36,
+    "reductionOptions": {
+      "specificAilments": true,
+      "ped": true
+    }
+  },
+  "copayAndZones": {
+    "mandatory": "none",
+    "mandatoryPercent": null,
+    "optionalCopayAvailable": false
+  },
+  "sublimits": {
+    "cataract": {
+      "type": "not_applicable",
+      "value": null,
+      "perEye": null
+    },
+    "diseaseSpecific": []
+  },
+  "valueAdds": {
+    "annualHealthCheckup": true,
+    "eConsult": true,
+    "wellnessBenefits": true,
+    "others": ["Second opinion concierge"]
+  },
+  "topUpSpecifics": {
+    "howDeductibleApplies": null,
+    "coverageAboveDeductible": [],
+    "roomRuleOnTopUp": null,
+    "rechargeOnTopUp": "na",
+    "ncbOnTopUp": "na"
+  },
+  "provenance": {
+    "sourceType": "policy_pdf",
+    "sourceName": "Acme Shield Health Brochure",
+    "sourceDate": "2025-10-01",
+    "extractionConfidence": 0.9
+  },
+  "notes": null
+}

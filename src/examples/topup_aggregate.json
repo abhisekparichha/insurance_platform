@@ -1,0 +1,116 @@
+{
+  "product": {
+    "insurer": "Guardian Health",
+    "planName": "Guardian Super Top-Up",
+    "variant": "Aggregate 5L",
+    "uin": "GRDTPAGG2024V02",
+    "policyType": "Individual",
+    "isTopUp": true,
+    "geography": "IN"
+  },
+  "sumInsured": {
+    "baseSI": 2000000,
+    "currency": "INR",
+    "availableBands": [1000000, 2000000, 3000000],
+    "unlimitedOneClaim": true
+  },
+  "deductible": {
+    "applies": true,
+    "type": "per_year",
+    "amount": 500000,
+    "aggregateApplies": true
+  },
+  "roomRent": {
+    "limitType": "no_cap",
+    "limitValue": null,
+    "icuLimitType": "no_cap",
+    "icuLimitValue": null,
+    "proportionateDeduction": "not_applicable",
+    "roomModifierOption": false
+  },
+  "hospitalization": {
+    "inpatient": "covered",
+    "daycare": "all_listed",
+    "preHospDays": 45,
+    "postHospDays": 120,
+    "domiciliary": {
+      "covered": true,
+      "minDays": 3,
+      "negativeListPresent": true,
+      "notes": "Excludes psychiatric care"
+    },
+    "ayush": {
+      "covered": true,
+      "limitType": "percent",
+      "limitValue": 50
+    }
+  },
+  "transport": {
+    "roadAmbulanceLimit": 15000,
+    "airAmbulance": "not_covered",
+    "airAmbulanceLimit": null
+  },
+  "organDonor": {
+    "covered": true,
+    "notes": "Donor medical expenses reimbursed"
+  },
+  "bonuses": {
+    "ncb": {
+      "accrualPerYearPercent": 25,
+      "maxCapPercent": 100,
+      "claimImpact": "reduces"
+    },
+    "recharge": {
+      "type": "twice",
+      "sameIllnessAllowed": false
+    }
+  },
+  "waitingPeriods": {
+    "initialDays": 30,
+    "specificAilmentsMonths": 36,
+    "pedMonths": 48,
+    "reductionOptions": {
+      "specificAilments": false,
+      "ped": false
+    }
+  },
+  "copayAndZones": {
+    "mandatory": "zone",
+    "mandatoryPercent": 10,
+    "optionalCopayAvailable": true
+  },
+  "sublimits": {
+    "cataract": {
+      "type": "rupee_cap",
+      "value": 75000,
+      "perEye": true
+    },
+    "diseaseSpecific": [
+      {
+        "name": "Joint Replacement",
+        "type": "rupee_cap",
+        "value": 200000
+      }
+    ]
+  },
+  "valueAdds": {
+    "annualHealthCheckup": false,
+    "eConsult": true,
+    "wellnessBenefits": false,
+    "others": ["Tele-medicine concierge"]
+  },
+  "topUpSpecifics": {
+    "howDeductibleApplies": "aggregate_year",
+    "coverageAboveDeductible": ["IPD", "daycare", "pre_post", "AYUSH"],
+    "roomRuleOnTopUp": "plan_rule",
+    "rechargeOnTopUp": "available",
+    "ncbOnTopUp": "na"
+  },
+  "provenance": {
+    "sourceType": "insurer_site",
+    "sourceName": "Guardian Super Top-Up Product Page",
+    "sourceDate": "2025-08-15",
+    "extractionConfidence": 0.8
+  },
+  "notes": "Zone based copay applies outside Tier-A cities."
+}

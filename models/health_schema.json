@@ -1,0 +1,666 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/health-product.json",
+  "title": "HealthInsuranceProduct",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "product",
+    "sumInsured",
+    "deductible",
+    "roomRent",
+    "hospitalization",
+    "transport",
+    "organDonor",
+    "bonuses",
+    "waitingPeriods",
+    "copayAndZones",
+    "sublimits",
+    "valueAdds",
+    "topUpSpecifics",
+    "provenance"
+  ],
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"],
+      "errorMessage": "Value must be a string or null."
+    },
+    "percentValue": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "errorMessage": {
+        "minimum": "Percentage must be >= 0.",
+        "maximum": "Percentage must be <= 100."
+      }
+    },
+    "positiveMoney": {
+      "type": "number",
+      "minimum": 0,
+      "errorMessage": "Monetary values must be zero or greater."
+    },
+    "booleanNull": {
+      "type": ["boolean", "null"]
+    },
+    "roomLimitDefinition": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "limitType": {
+          "type": "string",
+          "enum": [
+            "no_cap",
+            "single_private_room",
+            "twin_sharing",
+            "percent_of_SI",
+            "rupee_cap"
+          ]
+        },
+        "limitValue": {
+          "type": ["number", "null"]
+        }
+      },
+      "required": ["limitType", "limitValue"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "limitType": {
+                "const": "percent_of_SI"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitValue": {
+                "$ref": "#/$defs/percentValue"
+              }
+            },
+            "required": ["limitValue"],
+            "errorMessage": "When limitType is percent_of_SI, limitValue must be 0-100."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "limitType": {
+                "enum": ["rupee_cap"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitValue": {
+                "$ref": "#/$defs/positiveMoney"
+              }
+            },
+            "required": ["limitValue"],
+            "errorMessage": "Rupee cap requires a non-negative limitValue."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "limitType": {
+                "enum": ["no_cap", "single_private_room", "twin_sharing"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitValue": {
+                "type": "null"
+              }
+            },
+            "errorMessage": "Room types with inherent descriptions cannot have a numeric limitValue."
+          }
+        }
+      ]
+    },
+    "icuLimitDefinition": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "icuLimitType": {
+          "type": "string",
+          "enum": ["no_cap", "percent_of_SI", "rupee_cap"]
+        },
+        "icuLimitValue": {
+          "type": ["number", "null"]
+        }
+      },
+      "required": ["icuLimitType", "icuLimitValue"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "icuLimitType": { "const": "percent_of_SI" }
+            }
+          },
+          "then": {
+            "properties": {
+              "icuLimitValue": {
+                "$ref": "#/$defs/percentValue"
+              }
+            },
+            "required": ["icuLimitValue"],
+            "errorMessage": "ICU percent limits must be within 0-100."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "icuLimitType": { "const": "rupee_cap" }
+            }
+          },
+          "then": {
+            "properties": {
+              "icuLimitValue": {
+                "$ref": "#/$defs/positiveMoney"
+              }
+            },
+            "required": ["icuLimitValue"],
+            "errorMessage": "ICU rupee cap must be a non-negative number."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "icuLimitType": { "const": "no_cap" }
+            }
+          },
+          "then": {
+            "properties": {
+              "icuLimitValue": {
+                "type": "null"
+              }
+            },
+            "errorMessage": "ICU with no cap cannot include a limit value."
+          }
+        }
+      ]
+    },
+    "ayushLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "covered": { "type": "boolean" },
+        "limitType": {
+          "type": "string",
+          "enum": ["up_to_SI", "percent", "rupee_cap", "not_covered"]
+        },
+        "limitValue": {
+          "type": ["number", "null"]
+        }
+      },
+      "required": ["covered", "limitType", "limitValue"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "limitType": { "const": "percent" }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitValue": { "$ref": "#/$defs/percentValue" }
+            },
+            "errorMessage": "AYUSH percent limits must have a value between 0 and 100."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "limitType": { "enum": ["rupee_cap"] }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitValue": { "$ref": "#/$defs/positiveMoney" }
+            },
+            "errorMessage": "AYUSH rupee caps must be non-negative."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "limitType": { "enum": ["up_to_SI", "not_covered"] }
+            }
+          },
+          "then": {
+            "properties": {
+              "limitValue": { "type": "null" }
+            },
+            "errorMessage": "AYUSH limitType up_to_SI or not_covered must not set limitValue."
+          }
+        }
+      ]
+    },
+    "domiciliary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "covered": { "type": "boolean" },
+        "minDays": { "type": ["number", "null"], "minimum": 0 },
+        "negativeListPresent": { "type": "boolean" },
+        "notes": { "$ref": "#/$defs/nullableString" }
+      },
+      "required": ["covered", "minDays", "negativeListPresent", "notes"]
+    },
+    "ncb": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accrualPerYearPercent": { "type": ["number", "null"], "minimum": 0, "maximum": 200 },
+        "maxCapPercent": { "type": ["number", "null"], "minimum": 0, "maximum": 500 },
+        "claimImpact": {
+          "type": ["string", "null"],
+          "enum": ["reduces", "no_impact", null]
+        }
+      },
+      "required": ["accrualPerYearPercent", "maxCapPercent", "claimImpact"]
+    },
+    "recharge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["unlimited", "once", "twice", "na"]
+        },
+        "sameIllnessAllowed": { "type": ["boolean", "null"] }
+      },
+      "required": ["type", "sameIllnessAllowed"]
+    },
+    "waitingReductionOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "specificAilments": { "type": "boolean" },
+        "ped": { "type": "boolean" }
+      },
+      "required": ["specificAilments", "ped"]
+    },
+    "diseaseSpecificSublimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["percent", "rupee_cap"] },
+        "value": { "type": "number", "minimum": 0 }
+      },
+      "required": ["name", "type", "value"]
+    },
+    "topUpCoverage": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["IPD", "daycare", "AYUSH", "pre_post"]
+      },
+      "uniqueItems": true
+    }
+  },
+  "properties": {
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "insurer",
+        "planName",
+        "variant",
+        "uin",
+        "policyType",
+        "isTopUp",
+        "geography"
+      ],
+      "properties": {
+        "insurer": { "type": "string", "minLength": 1 },
+        "planName": { "type": "string", "minLength": 1 },
+        "variant": { "$ref": "#/$defs/nullableString" },
+        "uin": { "$ref": "#/$defs/nullableString" },
+        "policyType": {
+          "type": "string",
+          "enum": ["Individual", "Floater"]
+        },
+        "isTopUp": { "type": "boolean" },
+        "geography": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,3}$",
+          "errorMessage": "Geography must be an ISO-3166 alpha code (2-3 uppercase letters)."
+        }
+      }
+    },
+    "sumInsured": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseSI", "currency", "availableBands", "unlimitedOneClaim"],
+      "properties": {
+        "baseSI": { "$ref": "#/$defs/positiveMoney" },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "errorMessage": "Currency must be a 3-letter ISO code."
+        },
+        "availableBands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/positiveMoney" },
+          "uniqueItems": true
+        },
+        "unlimitedOneClaim": { "type": "boolean" }
+      }
+    },
+    "deductible": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applies", "type", "amount", "aggregateApplies"],
+      "properties": {
+        "applies": { "type": "boolean" },
+        "type": {
+          "type": ["string", "null"],
+          "enum": ["per_year", "per_claim", null]
+        },
+        "amount": { "type": ["number", "null"], "minimum": 0 },
+        "aggregateApplies": { "type": ["boolean", "null"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "applies": { "const": true } }
+          },
+          "then": {
+            "required": ["type"],
+            "properties": {
+              "type": { "enum": ["per_year", "per_claim"] },
+              "amount": { "type": ["number"], "minimum": 0 }
+            },
+            "errorMessage": "Deductible applying requires type per_year/per_claim and numeric amount."
+          }
+        },
+        {
+          "if": {
+            "properties": { "applies": { "const": false } }
+          },
+          "then": {
+            "properties": {
+              "type": { "type": "null" },
+              "amount": { "type": "null" },
+              "aggregateApplies": { "type": ["boolean", "null"] }
+            }
+          }
+        }
+      ]
+    },
+    "roomRent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "limitType",
+        "limitValue",
+        "icuLimitType",
+        "icuLimitValue",
+        "proportionateDeduction",
+        "roomModifierOption"
+      ],
+      "properties": {
+        "limitType": {
+          "type": "string",
+          "enum": [
+            "no_cap",
+            "single_private_room",
+            "twin_sharing",
+            "percent_of_SI",
+            "rupee_cap"
+          ]
+        },
+        "limitValue": { "type": ["number", "null"] },
+        "icuLimitType": {
+          "type": "string",
+          "enum": ["no_cap", "percent_of_SI", "rupee_cap"]
+        },
+        "icuLimitValue": { "type": ["number", "null"] },
+        "proportionateDeduction": {
+          "type": "string",
+          "enum": ["applies", "waived_with_addon", "not_applicable"]
+        },
+        "roomModifierOption": { "type": "boolean" }
+      },
+      "allOf": [
+        { "$ref": "#/$defs/roomLimitDefinition" },
+        { "$ref": "#/$defs/icuLimitDefinition" }
+      ]
+    },
+    "hospitalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inpatient",
+        "daycare",
+        "preHospDays",
+        "postHospDays",
+        "domiciliary",
+        "ayush"
+      ],
+      "properties": {
+        "inpatient": { "type": "string", "enum": ["covered", "not_covered"] },
+        "daycare": {
+          "type": "string",
+          "enum": ["all", "all_listed", "limited_list", "not_covered"]
+        },
+        "preHospDays": { "type": "number", "minimum": 0 },
+        "postHospDays": { "type": "number", "minimum": 0 },
+        "domiciliary": { "$ref": "#/$defs/domiciliary" },
+        "ayush": { "$ref": "#/$defs/ayushLimit" }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roadAmbulanceLimit", "airAmbulance", "airAmbulanceLimit"],
+      "properties": {
+        "roadAmbulanceLimit": { "type": ["number", "null"], "minimum": 0 },
+        "airAmbulance": {
+          "type": "string",
+          "enum": ["covered", "optional", "not_covered"]
+        },
+        "airAmbulanceLimit": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "organDonor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["covered", "notes"],
+      "properties": {
+        "covered": { "type": "boolean" },
+        "notes": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "bonuses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ncb", "recharge"],
+      "properties": {
+        "ncb": { "$ref": "#/$defs/ncb" },
+        "recharge": { "$ref": "#/$defs/recharge" }
+      }
+    },
+    "waitingPeriods": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initialDays",
+        "specificAilmentsMonths",
+        "pedMonths",
+        "reductionOptions"
+      ],
+      "properties": {
+        "initialDays": { "type": "number", "minimum": 0 },
+        "specificAilmentsMonths": { "type": "number", "minimum": 0 },
+        "pedMonths": { "type": "number", "minimum": 0 },
+        "reductionOptions": { "$ref": "#/$defs/waitingReductionOptions" }
+      }
+    },
+    "copayAndZones": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mandatory", "mandatoryPercent", "optionalCopayAvailable"],
+      "properties": {
+        "mandatory": {
+          "type": "string",
+          "enum": ["none", "age", "zone", "network", "disease_specific"]
+        },
+        "mandatoryPercent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "optionalCopayAvailable": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mandatory": { "const": "none" }
+            }
+          },
+          "then": {
+            "properties": {
+              "mandatoryPercent": { "type": "null" }
+            },
+            "errorMessage": "Mandatory percent must be null when no copay applies."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mandatory": { "enum": ["age", "zone", "network", "disease_specific"] }
+            }
+          },
+          "then": {
+            "properties": {
+              "mandatoryPercent": { "$ref": "#/$defs/percentValue" }
+            },
+            "errorMessage": "Mandatory copays require a percentage between 0 and 100."
+          }
+        }
+      ]
+    },
+    "sublimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cataract", "diseaseSpecific"],
+      "properties": {
+        "cataract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value", "perEye"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["percent_of_SI", "rupee_cap", "not_applicable"]
+            },
+            "value": { "type": ["number", "null"], "minimum": 0 },
+            "perEye": { "type": ["boolean", "null"] }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "type": { "const": "percent_of_SI" } }
+              },
+              "then": {
+                "properties": { "value": { "$ref": "#/$defs/percentValue" } },
+                "errorMessage": "Cataract percent sublimits must be 0-100."
+              }
+            },
+            {
+              "if": {
+                "properties": { "type": { "const": "rupee_cap" } }
+              },
+              "then": {
+                "properties": { "value": { "$ref": "#/$defs/positiveMoney" } },
+                "errorMessage": "Cataract rupee caps must be non-negative."
+              }
+            },
+            {
+              "if": {
+                "properties": { "type": { "const": "not_applicable" } }
+              },
+              "then": {
+                "properties": { "value": { "type": "null" }, "perEye": { "type": "null" } },
+                "errorMessage": "Not applicable cataract limits cannot have numeric values."
+              }
+            }
+          ]
+        },
+        "diseaseSpecific": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diseaseSpecificSublimit" }
+        }
+      }
+    },
+    "valueAdds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["annualHealthCheckup", "eConsult", "wellnessBenefits", "others"],
+      "properties": {
+        "annualHealthCheckup": { "type": "boolean" },
+        "eConsult": { "type": "boolean" },
+        "wellnessBenefits": { "type": "boolean" },
+        "others": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "topUpSpecifics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "howDeductibleApplies",
+        "coverageAboveDeductible",
+        "roomRuleOnTopUp",
+        "rechargeOnTopUp",
+        "ncbOnTopUp"
+      ],
+      "properties": {
+        "howDeductibleApplies": {
+          "type": ["string", "null"],
+          "enum": ["aggregate_year", "per_claim", null]
+        },
+        "coverageAboveDeductible": { "$ref": "#/$defs/topUpCoverage" },
+        "roomRuleOnTopUp": {
+          "type": ["string", "null"],
+          "enum": ["same_as_base", "plan_rule", null]
+        },
+        "rechargeOnTopUp": {
+          "type": "string",
+          "enum": ["available", "na"]
+        },
+        "ncbOnTopUp": {
+          "type": "string",
+          "enum": ["available", "na"]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceType", "sourceName", "sourceDate", "extractionConfidence"],
+      "properties": {
+        "sourceType": {
+          "type": "string",
+          "enum": ["manual", "policy_pdf", "insurer_site", "broker_portal"]
+        },
+        "sourceName": { "type": "string", "minLength": 1 },
+        "sourceDate": {
+          "type": "string",
+          "format": "date",
+          "errorMessage": "Source date must follow ISO date format (YYYY-MM-DD)."
+        },
+        "extractionConfidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "errorMessage": "Extraction confidence must be a probability between 0 and 1."
+        }
+      }
+    },
+    "notes": { "$ref": "#/$defs/nullableString" }
+  }
+}

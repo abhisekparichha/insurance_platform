@@ -1,0 +1,32 @@
+{
+  "name": "health-insurance-evaluator",
+  "version": "0.1.0",
+  "description": "Standardized health insurance schema and evaluation engine",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-errors": "^3.0.0",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^20.12.12",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
+    "eslint": "^9.4.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.9.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
