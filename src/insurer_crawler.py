@@ -16,6 +16,7 @@ from typing import Dict, List, Sequence, Tuple
 
 import requests
 from bs4 import BeautifulSoup, Tag
+from .utils import clean_text as normalize_text
 
 LOGGER = logging.getLogger(__name__)
 USER_AGENT = (
@@ -23,7 +24,6 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
 )
 
-WHITESPACE_RE = re.compile(r"\s+")
 URL_RE = re.compile(r"(https?://[^\s,;]+|www\.[^\s,;]+)", re.IGNORECASE)
 
 
@@ -101,7 +101,7 @@ def fetch_html(url: str) -> str:
 def clean_text(node: Tag) -> str:
     """Extract and normalize text content from a BeautifulSoup tag."""
     text = node.get_text(separator=" ", strip=True)
-    return WHITESPACE_RE.sub(" ", text)
+    return normalize_text(text)
 
 
 def parse_table(html: str, table_id: str) -> Tuple[List[str], List[Dict[str, str]]]:
