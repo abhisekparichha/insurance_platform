@@ -81,6 +81,27 @@ class InsurerProductCrawler:
         "life_term": ("term", "term plan", "life cover"),
         "life_savings": ("traditional", "savings", "endowment", "money back", "investment"),
     }
+    REQUIRED_DOCUMENT_TYPES = {"brochure", "policy_wording", "prospectus"}
+    DOWNLOAD_URL_HINTS = (
+        "download",
+        "downloads",
+        "product-brochure",
+        "productbrochure",
+        "policy-wording",
+        "policy_wording",
+        "policywording",
+        "policy-document",
+    )
+    DOWNLOAD_TEXT_HINTS = (
+        "download",
+        "downloads",
+        "brochure",
+        "product brochure",
+        "policy wording",
+        "policy wordings",
+        "policy document",
+        "policy schedule",
+    )
 
     def __init__(
         self,
@@ -222,16 +243,13 @@ class InsurerProductCrawler:
         self, insurer: Insurer, page_url: str, soup: BeautifulSoup
     ) -> List[ProductDocument]:
         documents: List[ProductDocument] = []
-        for anchor in soup.find_all("a", href=True):
-            href = anchor["href"].strip()
-            absolute = make_absolute_url(href, page_url)
-            if not absolute:
+        for anchor, absolute, anchor_text in self._iter_document_links(soup, page_url):
+            document_type = self._infer_document_type(anchor_text, absolute)
+            if document_type not in self.REQUIRED_DOCUMENT_TYPES:
                 continue
-            if not any(absolute.lower().endswith(ext) for ext in (".pdf", ".doc", ".docx")):
+            if not self._looks_like_download_link(anchor, anchor_text, absolute):
                 continue
 
-            anchor_text = clean_text(anchor.get_text(" ", strip=True))
-            document_type = self._infer_document_type(anchor_text)
             doc_id = slugify(f"{insurer.insurer_id}-{Path(absolute).stem}-{document_type}")
             document = ProductDocument(
                 document_id=doc_id,
@@ -241,10 +259,59 @@ class InsurerProductCrawler:
                 metadata={
                     "anchor_text": anchor_text,
                     "page_url": page_url,
+                    "discovery_method": "download_section",
                 },
             )
             documents.append(document)
         return documents
+
+    def _iter_document_links(
+        self, soup: BeautifulSoup, page_url: str
+    ) -> Iterable[tuple[Tag, str, str]]:
+        for anchor in soup.find_all("a", href=True):
+            href = anchor["href"].strip()
+            if not href:
+                continue
+            absolute = make_absolute_url(href, page_url)
+            if not absolute:
+                continue
+            lower_url = absolute.lower()
+            if not lower_url.endswith((".pdf", ".doc", ".docx")):
+                continue
+            anchor_text = clean_text(anchor.get_text(" ", strip=True))
+            yield anchor, absolute, anchor_text
+
+    def _looks_like_download_link(self, anchor: Tag, anchor_text: str, absolute_url: str) -> bool:
+        text = (anchor_text or "").lower()
+        url = absolute_url.lower()
+        if any(keyword in url for keyword in self.DOWNLOAD_URL_HINTS):
+            return True
+        if any(keyword in text for keyword in self.DOWNLOAD_TEXT_HINTS):
+            return True
+        for attr in ("title", "aria-label", "data-title", "data-label"):
+            value = anchor.get(attr)
+            if isinstance(value, str) and any(keyword in value.lower() for keyword in self.DOWNLOAD_TEXT_HINTS):
+                return True
+        for attr in ("class", "id"):
+            value = anchor.get(attr)
+            if isinstance(value, list):
+                value = " ".join(value)
+            if isinstance(value, str) and any(keyword in value.lower() for keyword in self.DOWNLOAD_TEXT_HINTS):
+                return True
+        parent = anchor.parent
+        depth = 0
+        while parent is not None and depth < 3:
+            for attr in ("class", "id", "data-section", "data-testid"):
+                value = parent.get(attr)
+                if isinstance(value, list):
+                    value = " ".join(value)
+                if isinstance(value, str) and any(
+                    keyword in value.lower() for keyword in self.DOWNLOAD_TEXT_HINTS
+                ):
+                    return True
+            parent = parent.parent
+            depth += 1
+        return False
 
     def _associate_documents(
         self,
@@ -303,11 +370,21 @@ class InsurerProductCrawler:
         lowercase = value.lower()
         return any(keyword in lowercase for keyword in self.PRODUCT_KEYWORDS) and len(value) > 5
 
-    def _infer_document_type(self, anchor_text: str) -> str:
-        text = anchor_text.lower()
+    def _infer_document_type(self, anchor_text: str, href: str = "") -> str:
+        text = (anchor_text or "").lower()
         for doc_type, keywords in self.DOCUMENT_KEYWORDS.items():
             if any(keyword in text for keyword in keywords):
                 return doc_type
+
+        if href:
+            href_lower = href.lower()
+            normalized_url = href_lower.replace("-", " ").replace("_", " ")
+            for doc_type, keywords in self.DOCUMENT_KEYWORDS.items():
+                for keyword in keywords:
+                    normalized_keyword = keyword.lower()
+                    if normalized_keyword in normalized_url or normalized_keyword.replace(" ", "") in href_lower:
+                        return doc_type
+
         return "other"
 
     def _collect_description(self, heading: Tag) -> str:
