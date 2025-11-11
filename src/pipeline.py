@@ -1,6 +1,8 @@
 """High level pipeline orchestrating insurer crawling, product discovery, and data persistence."""
 from __future__ import annotations
 
+import csv
+import json
 import argparse
 import logging
 from dataclasses import dataclass
@@ -68,6 +70,8 @@ class InsuranceDataPipeline:
         LOGGER.info("Persisting %d insurers", len(insurers))
         self.repository.upsert_insurers(insurers)
 
+        document_mappings: List[dict[str, str]] = []
+
         for index, insurer in enumerate(insurers, start=1):
             LOGGER.info(
                 "Processing insurer %d/%d: %s",
@@ -76,6 +80,8 @@ class InsuranceDataPipeline:
                 insurer.name,
             )
             result = self.product_crawler.crawl_insurer(insurer)
+
+            product_lookup = {product.product_id: product for product in result.products}
 
             self.repository.upsert_products(result.products)
             self.repository.upsert_documents(result.documents)
@@ -93,6 +99,12 @@ class InsuranceDataPipeline:
                 len(result.documents),
                 insurer.name,
             )
+
+            mappings = self._build_document_mappings(insurer.name, product_lookup, result.documents)
+            document_mappings.extend(mappings)
+
+        if document_mappings:
+            self._persist_document_mappings(document_mappings)
 
     def _crawl_insurer_directory(self) -> List[Insurer]:
         aggregated_rows = []
@@ -120,6 +132,69 @@ class InsuranceDataPipeline:
             for row in aggregated_rows
         ]
         return insurers
+
+    def _build_document_mappings(
+        self,
+        insurer_name: str,
+        products: dict[str, Product],
+        documents: Iterable[ProductDocument],
+    ) -> List[dict[str, str]]:
+        mappings: List[dict[str, str]] = []
+        for document in documents:
+            if document.document_type not in {"policy_wording", "brochure"}:
+                continue
+            product_id = document.product_id
+            if not product_id:
+                continue
+            product = products.get(product_id)
+            record = {
+                "insurer_id": document.insurer_id,
+                "insurer_name": insurer_name,
+                "product_id": product_id,
+                "product_name": product.name if product else "",
+                "document_id": document.document_id,
+                "document_type": document.document_type,
+                "source_url": document.source_url,
+                "local_path": str(document.local_path) if document.local_path else "",
+                "anchor_text": document.metadata.get("anchor_text", ""),
+                "discovered_from_url": document.metadata.get("page_url", ""),
+                "discovery_method": document.metadata.get("discovery_method", ""),
+            }
+            mappings.append(record)
+        return mappings
+
+    def _persist_document_mappings(self, mappings: List[dict[str, str]]) -> None:
+        if not mappings:
+            LOGGER.info("No policy wording or brochure mappings to persist.")
+            return
+
+        output_dir = self.config.data_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        json_path = output_dir / "product_document_mappings.json"
+        csv_path = output_dir / "product_document_mappings.csv"
+
+        json_payload = {
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "record_count": len(mappings),
+            "records": mappings,
+        }
+
+        json_path.write_text(json.dumps(json_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        headers = sorted({key for mapping in mappings for key in mapping.keys()})
+        with csv_path.open("w", encoding="utf-8", newline="") as fp:
+            writer = csv.DictWriter(fp, fieldnames=headers)
+            writer.writeheader()
+            for mapping in mappings:
+                writer.writerow(mapping)
+
+        LOGGER.info(
+            "Persisted %d product document mappings to %s and %s",
+            len(mappings),
+            json_path,
+            csv_path,
+        )
 
 
 def parse_args(argv: Optional[Iterable[str]] = None) -> PipelineConfig:

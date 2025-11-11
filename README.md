@@ -46,6 +46,7 @@ Results are written to the `data/` directory:
 - `data/raw/` contains the unmodified tables from each page (`*.json`, `*.csv`).
 - `data/*_normalized.*` files contain cleaned data per category.
 - `data/insurers.json` and `data/insurers.csv` aggregate all categories, including crawl metadata.
+- `data/product_document_mappings.*` map insurer products to policy wording and brochure documents.
 - `data/documents/` stores downloaded brochures and policy wordings (if enabled).
 - `data/insurance.db` is an SQLite database populated with insurers, products, documents, and normalized policy sections.
 
