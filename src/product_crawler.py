@@ -276,7 +276,8 @@ class InsurerProductCrawler:
             if not absolute:
                 continue
             lower_url = absolute.lower()
-            if not lower_url.endswith((".pdf", ".doc", ".docx")):
+            normalized_path = lower_url.split("?", 1)[0].split("#", 1)[0]
+            if not normalized_path.endswith(".pdf"):
                 continue
             anchor_text = clean_text(anchor.get_text(" ", strip=True))
             yield anchor, absolute, anchor_text
