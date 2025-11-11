@@ -18,6 +18,8 @@ LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_DOCUMENT_EXTENSIONS = {
     ".pdf": "application/pdf",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
 
@@ -51,7 +53,7 @@ class DocumentProcessor:
 
         extension = self._detect_extension(url)
         if extension not in SUPPORTED_DOCUMENT_EXTENSIONS:
-            LOGGER.debug("Skipping non-PDF document %s (detected extension %s)", url, extension)
+            LOGGER.debug("Skipping unsupported document %s (detected extension %s)", url, extension)
             document.metadata["extension"] = extension
             document.metadata["content_type"] = ""
             return document
@@ -97,7 +99,7 @@ class DocumentProcessor:
             return ext
         if ".pdf" in url.lower():
             return ".pdf"
-        return ext or ".pdf"
+        return ext or ".dat"
 
     def _build_local_path(self, insurer_id: str, document_id: str, extension: str) -> Path:
         sanitized = slugify(document_id) or document_id

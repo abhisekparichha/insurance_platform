@@ -75,6 +75,16 @@ class InsurerProductCrawler:
         "brochure": ("brochure", "leaflet"),
         "prospectus": ("prospectus", "sales brochure"),
     }
+    DOCUMENT_SEARCH_TERMS = tuple(
+        sorted(
+            {
+                keyword.lower()
+                for keywords in DOCUMENT_KEYWORDS.values()
+                for keyword in keywords
+            }
+            | {"policy", "wording", "brochure", "prospectus", "schedule"}
+        )
+    )
     CATEGORY_KEYWORDS = {
         "health": ("health", "medi", "mediclaim", "hospital"),
         "motor": ("motor", "car", "bike", "vehicle", "auto"),
@@ -277,10 +287,23 @@ class InsurerProductCrawler:
                 continue
             lower_url = absolute.lower()
             normalized_path = lower_url.split("?", 1)[0].split("#", 1)[0]
-            if not normalized_path.endswith(".pdf"):
+            if not normalized_path.endswith((".pdf", ".doc", ".docx")):
                 continue
             anchor_text = clean_text(anchor.get_text(" ", strip=True))
+            if not self._contains_document_keyword(anchor_text, normalized_path):
+                continue
             yield anchor, absolute, anchor_text
+
+    @classmethod
+    def _contains_document_keyword(cls, anchor_text: str, normalized_url: str) -> bool:
+        sanitized_url = (
+            normalized_url.replace("-", " ")
+            .replace("_", " ")
+            .replace("/", " ")
+            .replace("%20", " ")
+        )
+        haystack = f"{anchor_text or ''} {sanitized_url}".lower()
+        return any(term in haystack for term in cls.DOCUMENT_SEARCH_TERMS)
 
     def _looks_like_download_link(self, anchor: Tag, anchor_text: str, absolute_url: str) -> bool:
         text = (anchor_text or "").lower()
