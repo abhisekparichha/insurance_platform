@@ -88,6 +88,38 @@ All commands are deterministic and run locally without network access.
 
 Country-specific quirks can be handled via optional fields (e.g., region-specific copay types) without breaking the core schema; keep ISO codes and monetary fields currency-aware so localization remains portable.
 
+
+
+
+### 
+Read 5 files, updated todo list 3 times, replaced text 3 times, and ran 2 terminal commands and thought for 8s
+Summary
+
+    Added scripts/install_and_run.sh, a single entry-point that wires up venv creation, Python deps, pnpm install, the ingestion pipeline, and TypeScript quality gates, plus skip flags and pipeline arg pass-through so you can tailor the workflow per run.
+
+Usage: scripts/install_and_run.sh [options] [-- <pipeline args>]
+…
+if [[ $SKIP_PIPELINE -eq 0 ]]; then
+  log "Running insurance data pipeline ${PIPELINE_ARGS[*]:-}"
+  "$PYTHON_RUNNER" -m src.pipeline "${PIPELINE_ARGS[@]}"
+else
+  log "Skipping pipeline execution"
+fi
+…
+log "All steps completed successfully."
+
+    Documented the new “one-command setup” flow in README.md, including examples for forwarding custom pipeline flags or skipping expensive stages so newcomers can reproduce the end-to-end run quickly.
+
+### One-command setup
+…
+./scripts/install_and_run.sh -- --max-insurers 3 --no-download-documents
+
+Tests
+
+    ./scripts/install_and_run.sh --skip-python-install --skip-node-install --skip-node-tasks --skip-pipeline
+###
+
+
 ### Future integration
 
 The normalization layer accepts a `RawExtract` interface designed for future PDF/OCR or LLM-based extractors. Pipe their outputs into `normalize(raw)` → `validateHealthProduct` → `scoreProduct` to obtain audit-ready evaluations with machine-readable rationales.
