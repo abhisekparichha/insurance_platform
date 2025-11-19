@@ -21,6 +21,22 @@ Install Node dependencies:
 pnpm install
 ```
 
+### One-command setup
+
+The repo ships with `scripts/install_and_run.sh`, which creates a virtual environment, installs Node dependencies, runs the Python ingestion pipeline, and executes the TypeScript lint/typecheck/test suite:
+
+```
+./scripts/install_and_run.sh
+```
+
+Add `--` followed by any pipeline flags to forward them to `python -m src.pipeline`. For example, to skip document downloads and limit the run to three insurers:
+
+```
+./scripts/install_and_run.sh -- --max-insurers 3 --no-download-documents
+```
+
+Use `--skip-pipeline`, `--skip-node-tasks`, etc., if you only need part of the workflow.
+
 ## Usage
 
 Run the IRDAI directory crawler to fetch and organize the data for general, life, and health insurers:
