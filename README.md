@@ -104,7 +104,40 @@ All commands are deterministic and run locally without network access.
 
 Country-specific quirks can be handled via optional fields (e.g., region-specific copay types) without breaking the core schema; keep ISO codes and monetary fields currency-aware so localization remains portable.
 
+## Frontend experience (React + Tailwind)
 
+A new `frontend/` workspace ships a Vite-powered React app that implements the product-browse/search experience described in the brief:
+
+- Global search bar with 300 ms debounce, recent-search memory, and live suggestions.
+- Category rail + filterable product grid (insurer, coverage type, tags, sorting, pagination).
+- Product detail panel with overview, policy-wording viewer (expand/collapse + anchor hints), live reviews, and document links.
+- Policy score view wired to the backend scoring contract.
+- Mock data layer that mirrors the REST payloads so the UI runs even without an API server.
+
+### Getting started
+
+```bash
+cd frontend
+pnpm install
+pnpm dev             # starts Vite on http://localhost:5173
+pnpm build           # production build
+pnpm test            # Vitest + Testing Library integration tests
+pnpm test:e2e        # Playwright (requires the dev server)
+```
+
+Set `VITE_API_BASE_URL` to point at the real backend. If it is omitted (default) or if `VITE_USE_MOCKS=true`, the UI serves data from `src/lib/mockData.ts`.
+
+### Expected REST surface
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /categories` | Returns category metadata (`id`, label, icon name, product counts). |
+| `GET /insurers` | Insurer directory used for filters/badges. |
+| `GET /products?categoryId&search&insurers[]&coverageTypes[]&tags[]&sort&page&pageSize` | Cursor/page-based product summaries for the grid. |
+| `GET /products/:id` | Full product detail (policy wording, scorecard, documents, reviews). |
+| `GET /search/suggestions?search=term` | Up to 6 suggestion rows for the header typeahead. |
+
+All endpoints should be CORS-enabled for the Vite dev server origin. The UI expects JSON responses that align with the TypeScript interfaces under `frontend/src/types`.
 
 
 ### 
