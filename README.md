@@ -127,6 +127,45 @@ pnpm test:e2e        # Playwright (requires the dev server)
 
 Set `VITE_API_BASE_URL` to point at the real backend. If it is omitted (default) or if `VITE_USE_MOCKS=true`, the UI serves data from `src/lib/mockData.ts`.
 
+### Thinking process & architecture
+
+- **Experience-first**: start with the three critical flows—browse by category, global search, and deep policy review. Every component maps directly to one of these flows (header = intent capture, grid = exploration, detail = decision support).
+- **State isolation**: React Query handles server data (categories/products/insurers), while a lightweight `SearchContext` stores only UI state that must survive navigation (current term + recents).
+- **Mock parity**: mock data mirrors the REST schema so frontend work can proceed before APIs stabilize; flipping `VITE_USE_MOCKS` swaps data sources without touching UI code.
+- **Performance guardrails**: search input uses a debounced controlled value; list interactions prefetch detail queries to keep the policy viewer snappy; pagination is server-driven for scale.
+- **Accessibility + trust**: aria labels, keyboardable chips, and focus states aim for Lighthouse >90, while policy excerpts, scorecards, and reviews stay visible simultaneously to reinforce transparency.
+
+### Installation steps
+
+Front-to-back setup (first-time contributors):
+
+1. **Clone & prerequisites**
+   ```bash
+   git clone <repo>
+   cd insurance_platform
+   ```
+   Ensure Node 18+ / pnpm ≥8 and Python 3.10+ are available.
+
+2. **Legacy toolchain (optional)** – to run the crawler + schema engine:
+   ```bash
+   pip install -r requirements.txt
+   pnpm install          # root dependencies for schema/tests
+   pnpm test             # run TypeScript tests if needed
+   ```
+
+3. **One-command pipeline (optional)**
+   ```bash
+   ./scripts/install_and_run.sh -- --max-insurers 3
+   ```
+
+4. **Frontend workspace**
+   ```bash
+   cd frontend
+   pnpm install
+   pnpm dev
+   ```
+   Visit http://localhost:5173 and, if required, set `VITE_API_BASE_URL` in `.env.local`.
+
 ### Expected REST surface
 
 | Endpoint | Purpose |
@@ -138,6 +177,29 @@ Set `VITE_API_BASE_URL` to point at the real backend. If it is omitted (default)
 | `GET /search/suggestions?search=term` | Up to 6 suggestion rows for the header typeahead. |
 
 All endpoints should be CORS-enabled for the Vite dev server origin. The UI expects JSON responses that align with the TypeScript interfaces under `frontend/src/types`.
+
+### Deployment methods
+
+- **Static hosting (recommended)**: run `pnpm build` inside `frontend/`. The Vite build outputs `dist/`, which can be deployed to any static host (Netlify, Vercel, S3 + CloudFront, Nginx). Serve with SPA rewrites so `/product/:id` routes resolve to `index.html`.
+- **Container approach**: wrap the frontend in a lightweight image:
+
+  ```dockerfile
+  FROM node:20-alpine AS build
+  WORKDIR /app
+  COPY frontend/package.json frontend/pnpm-lock.yaml ./
+  RUN corepack enable && pnpm install --frozen-lockfile
+  COPY frontend .
+  RUN pnpm build
+
+  FROM nginx:alpine
+  COPY --from=build /app/dist /usr/share/nginx/html
+  ```
+
+  Expose port 80/443 via your orchestrator.
+
+- **SSR / Reverse proxy**: If you already operate a backend service, place the static assets behind the same domain and proxy `/api/*` to your REST services to avoid CORS and simplify cookies.
+
+Remember to provide `VITE_API_BASE_URL` (and any auth tokens) as build-time environment variables or runtime-config scripts, depending on your platform.
 
 
 ### 
