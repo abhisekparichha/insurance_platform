@@ -65,6 +65,32 @@ Results are written to the `data/` directory:
 - `data/product_document_mappings.*` map insurer products to policy wording and brochure documents.
 - `data/documents/` stores downloaded brochures and policy wordings (if enabled).
 - `data/insurance.db` is an SQLite database populated with insurers, products, documents, and normalized policy sections.
+- `data/document_download_queue.json` lists every document that still needs to be fetched when downloads are skipped.
+
+### Two-phase document downloads
+
+If you want the relational data immediately but prefer to download PDFs later (or from a different machine/network), run the pipeline without downloads and use the asynchronous downloader when ready:
+
+1. **Ingest without documents (records every download URL):**
+   ```bash
+   python -m src.pipeline --no-download-documents
+   ```
+   This still inserts document metadata into `data/insurance.db` and writes a manifest of pending URLs to `data/document_download_queue.json`.
+
+2. **Download outstanding files with backoff + retries:**
+   ```bash
+   python scripts/download_documents.py \
+     --queue data/document_download_queue.json \
+     --db data/insurance.db \
+     --min-delay 1.5 \
+     --max-delay 4.0 \
+     --max-parallel-insurers 2 \
+     --retries 2
+   ```
+   The downloader:
+   - Sleeps for a random duration between `min-delay`/`max-delay` before each request to avoid hammering a server.
+   - Processes insurers in parallel (bounded by `--max-parallel-insurers`) but only retries failures after it has looped through every other insurer.
+   - Updates `product_documents.local_path` in `data/insurance.db` and rewrites `data/document_download_queue.json` to reflect any remaining failures (so you can re-run the same command later).
 
 Each normalized insurer record includes a `website_url` field when a URL can be inferred from the source content. Product records are tagged with inferred categories (health, motor, life_term, life_savings) and any extracted documents are parsed and mapped to canonical policy schemas where possible.
 

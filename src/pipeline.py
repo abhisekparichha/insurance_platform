@@ -13,7 +13,7 @@ from typing import Iterable, List, Optional
 from . import insurer_crawler
 from .database import InsuranceRepository
 from .document_processing import DocumentProcessor, DocumentProcessorConfig, PolicyNormalizer
-from .models import Insurer
+from .models import Insurer, Product, ProductDocument
 from .product_crawler import InsurerProductCrawler, ProductCrawlerConfig
 
 LOGGER = logging.getLogger(__name__)
@@ -71,6 +71,7 @@ class InsuranceDataPipeline:
         self.repository.upsert_insurers(insurers)
 
         document_mappings: List[dict[str, str]] = []
+        pending_downloads: List[dict[str, str]] = []
 
         for index, insurer in enumerate(insurers, start=1):
             LOGGER.info(
@@ -102,9 +103,17 @@ class InsuranceDataPipeline:
 
             mappings = self._build_document_mappings(insurer.name, product_lookup, result.documents)
             document_mappings.extend(mappings)
+            pending_downloads.extend(
+                self._collect_pending_downloads(
+                    insurer=insurer,
+                    documents=result.documents,
+                    products=product_lookup,
+                )
+            )
 
         if document_mappings:
             self._persist_document_mappings(document_mappings)
+        self._persist_download_queue(pending_downloads)
 
     def _crawl_insurer_directory(self) -> List[Insurer]:
         aggregated_rows = []
@@ -194,6 +203,49 @@ class InsuranceDataPipeline:
             len(mappings),
             json_path,
             csv_path,
+        )
+
+    def _collect_pending_downloads(
+        self,
+        insurer: Insurer,
+        documents: Iterable[ProductDocument],
+        products: dict[str, Product],
+    ) -> List[dict[str, str]]:
+        queue: List[dict[str, str]] = []
+        for document in documents:
+            local_path = document.local_path
+            if local_path and Path(local_path).exists():
+                continue
+            product = products.get(document.product_id or "")
+            queue.append(
+                {
+                    "insurer_id": insurer.insurer_id,
+                    "insurer_name": insurer.name,
+                    "document_id": document.document_id,
+                    "document_type": document.document_type,
+                    "product_id": document.product_id or "",
+                    "product_name": product.name if product else "",
+                    "source_url": document.source_url,
+                    "page_url": document.metadata.get("page_url", ""),
+                    "anchor_text": document.metadata.get("anchor_text", ""),
+                    "discovery_method": document.metadata.get("discovery_method", ""),
+                    "extension": document.metadata.get("extension", ""),
+                }
+            )
+        return queue
+
+    def _persist_download_queue(self, queue: List[dict[str, str]]) -> None:
+        payload = {
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "document_count": len(queue),
+            "documents": queue,
+        }
+        output_path = self.config.data_dir / "document_download_queue.json"
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        LOGGER.info(
+            "Recorded %d pending document downloads to %s",
+            len(queue),
+            output_path,
         )
 
 
