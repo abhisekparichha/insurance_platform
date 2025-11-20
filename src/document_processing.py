@@ -59,24 +59,25 @@ class DocumentProcessor:
             return document
         local_path = self._build_local_path(document.insurer_id, document.document_id, extension)
 
-        if self.config.download_documents:
-            try:
-                content = self._download(url)
-                if not content:
-                    return document
-                document.content_hash = compute_content_hash(content)
-                local_path.parent.mkdir(parents=True, exist_ok=True)
-                local_path.write_bytes(content)
-                document.local_path = local_path
-                document.extracted_text = self._extract_text(local_path, extension)
-            except Exception as exc:  # pylint: disable=broad-except
-                LOGGER.warning("Failed to process document %s: %s", url, exc)
-        else:
-            document.local_path = local_path
-            document.extracted_text = ""
-
         document.metadata["extension"] = extension
         document.metadata["content_type"] = SUPPORTED_DOCUMENT_EXTENSIONS.get(extension, "")
+
+        if not self.config.download_documents:
+            document.local_path = None
+            document.extracted_text = ""
+            return document
+
+        try:
+            content = self._download(url)
+            if not content:
+                return document
+            document.content_hash = compute_content_hash(content)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            local_path.write_bytes(content)
+            document.local_path = local_path
+            document.extracted_text = self._extract_text(local_path, extension)
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.warning("Failed to process document %s: %s", url, exc)
         return document
 
     def _download(self, url: str) -> bytes:
