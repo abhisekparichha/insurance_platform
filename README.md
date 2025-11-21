@@ -94,6 +94,37 @@ If you want the relational data immediately but prefer to download PDFs later (o
 
 Each normalized insurer record includes a `website_url` field when a URL can be inferred from the source content. Product records are tagged with inferred categories (health, motor, life_term, life_savings) and any extracted documents are parsed and mapped to canonical policy schemas where possible.
 
+### Reprocess existing data (no crawl/download)
+
+If the crawl has already populated `data/insurance.db` and `data/documents/`, but the frontend is missing parsed sections, rerun the parsing/normalization phases without touching the network:
+
+```bash
+python -m src.reprocess_local_documents \
+  --db data/insurance.db \
+  --data-dir data \
+  --documents-dir data/documents \
+  --only-missing-text
+```
+
+This script:
+
+- Loads all `product_documents` rows (optionally scoped with `--insurer <id or name>`)
+- Reads the existing local files, recomputes hashes, extracts text, and updates `product_documents`
+- Regenerates `policy_sections` via the canonical schemas (skip with `--skip-policy-sections`)
+- Rebuilds `data/product_document_mappings.{json,csv}` and a fresh `data/document_download_queue.json`
+
+Pass `--max-documents N` to dry-run a small sample, or drop `--only-missing-text` to force a full refresh.
+
+#### Frontend troubleshooting checklist
+
+When uploaded/parsed documents fail to appear in the UI:
+
+1. Run the reprocess script above (add `--insurer <slug>` to limit scope).  
+2. Restart or rebuild your API so it re-reads `data/insurance.db` after the refresh.  
+3. Bounce the frontend dev server (`pnpm dev`) so it picks up the updated responses.  
+4. Inspect the browser network tab to ensure `/products/:id` now returns `documents` entries pointing to your refreshed PDFs.  
+5. If a document is still missing, check the regenerated `data/document_download_queue.json` for the entry—if it’s there, the file is absent locally and must be copied into `data/documents/<insurer_id>/`.
+
 ---
 
 ## Health Insurance Schema & Evaluation Engine
