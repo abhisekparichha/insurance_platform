@@ -94,6 +94,27 @@ If you want the relational data immediately but prefer to download PDFs later (o
 
 Each normalized insurer record includes a `website_url` field when a URL can be inferred from the source content. Product records are tagged with inferred categories (health, motor, life_term, life_savings) and any extracted documents are parsed and mapped to canonical policy schemas where possible.
 
+### Reprocess existing data (no crawl/download)
+
+If the crawl has already populated `data/insurance.db` and `data/documents/`, but the frontend is missing parsed sections, rerun the parsing/normalization phases without touching the network:
+
+```bash
+python -m src.reprocess_local_documents \
+  --db data/insurance.db \
+  --data-dir data \
+  --documents-dir data/documents \
+  --only-missing-text
+```
+
+This script:
+
+- Loads all `product_documents` rows (optionally scoped with `--insurer <id or name>`)
+- Reads the existing local files, recomputes hashes, extracts text, and updates `product_documents`
+- Regenerates `policy_sections` via the canonical schemas (skip with `--skip-policy-sections`)
+- Rebuilds `data/product_document_mappings.{json,csv}` and a fresh `data/document_download_queue.json`
+
+Pass `--max-documents N` to dry-run a small sample, or drop `--only-missing-text` to force a full refresh.
+
 ---
 
 ## Health Insurance Schema & Evaluation Engine
