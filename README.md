@@ -223,6 +223,14 @@ Front-to-back setup (first-time contributors):
    ```
    Visit http://localhost:5173 and, if required, set `VITE_API_BASE_URL` in `.env.local`.
 
+### Data decoupling scripts
+
+- `scripts/decouple_data.sh` — Guarantees `data/` stays ignored by adding the entry to `.gitignore`, removing `data/` from the git index (`git rm -r --cached data`), and committing the change with `chore: stop tracking data/ and update .gitignore`.
+- `scripts/delete_data.sh` — Safely deletes the local `data/` directory (prompting for confirmation unless `--yes` is provided) so large generated assets never linger in your repo.
+- `scripts/refresh_data.sh` — Calls `delete_data.sh --yes` and re-runs `python -m src.pipeline`; pass `--no-download` to forward `--no-download-documents` when you want to rebuild normalized data without pulling PDFs.
+
+Use these helpers whenever you need to reset or regenerate runtime data locally without risking accidental commits of large artifacts.
+
 ### Expected REST surface
 
 | Endpoint | Purpose |
