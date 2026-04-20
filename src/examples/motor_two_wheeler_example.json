@@ -1,0 +1,40 @@
+{
+  "product": {
+    "insurer": "Bajaj Allianz General Insurance",
+    "planName": "Two Wheeler Package Policy",
+    "vehicleType": "two_wheeler",
+    "uin": "IRDAN113RP0001V01202223"
+  },
+  "idv": {
+    "declaredValue": 95000,
+    "estimatedMarketValue": 100000,
+    "currency": "INR"
+  },
+  "addOns": {
+    "zeroDepreciation": true,
+    "engineProtection": false,
+    "consumablesCover": true,
+    "returnToInvoice": false,
+    "ncbProtection": true,
+    "roadsideAssistance": true,
+    "keyReplacement": false,
+    "tyreProtection": false
+  },
+  "personalAccident": {
+    "riderCoverAmount": 1500000,
+    "pillionCoverAvailable": true,
+    "pillionCoverAmount": 100000
+  },
+  "insurer": {
+    "motorCsr": 97.4,
+    "complaintsPerTenK": 35,
+    "networkGarages": 6500
+  },
+  "annualPremium": 3200,
+  "provenance": {
+    "sourceType": "insurer_site",
+    "sourceName": "Bajaj Allianz Two Wheeler Package Policy Page",
+    "sourceDate": "2025-09-01",
+    "extractionConfidence": 0.85
+  }
+}

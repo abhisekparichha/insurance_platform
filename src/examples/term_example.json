@@ -1,0 +1,41 @@
+{
+  "product": {
+    "insurer": "Axis Max Life Insurance",
+    "planName": "Smart Term Plan Plus",
+    "variant": "Level Cover",
+    "uin": "104N118V04"
+  },
+  "sumInsured": {
+    "baseSI": 10000000,
+    "currency": "INR"
+  },
+  "insurer": {
+    "csr": 99.65,
+    "asr": 95.20,
+    "solvencyRatio": 1.91,
+    "complaintsPerTenK": 18
+  },
+  "riders": {
+    "criticalIllness": {
+      "covered": true,
+      "illnessCount": 64
+    },
+    "accidentalDeath": true,
+    "waiverOfPremium": true,
+    "terminalIllness": true
+  },
+  "planOptions": {
+    "wholeLifeAvailable": true,
+    "limitedPayAvailable": true,
+    "staggeredPayoutAvailable": true,
+    "jointLifeAvailable": false
+  },
+  "annualPremium": 14200,
+  "benchmarkPremium": 16500,
+  "provenance": {
+    "sourceType": "insurer_site",
+    "sourceName": "Axis Max Life Smart Term Plan Plus Product Page",
+    "sourceDate": "2025-11-01",
+    "extractionConfidence": 0.92
+  }
+}
