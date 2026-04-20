@@ -18,7 +18,8 @@
     "ncbProtection": true,
     "roadsideAssistance": true,
     "keyReplacement": false,
-    "tyreProtection": false
+    "tyreProtection": false,
+    "cngLpgEndorsementIncluded": false
   },
   "personalAccident": {
     "riderCoverAmount": 1500000,
@@ -28,7 +29,8 @@
   "insurer": {
     "motorCsr": 97.4,
     "complaintsPerTenK": 35,
-    "networkGarages": 6500
+    "networkGarages": 6500,
+    "claimsWithin30DaysPercent": 85
   },
   "annualPremium": 3200,
   "provenance": {

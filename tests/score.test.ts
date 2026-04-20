@@ -36,6 +36,12 @@ describe("scoreProduct — health base plan", () => {
     const roomRent = evaluation.scores.find((s) => s.parameter === "room_rent");
     expect(roomRent?.rating).toBe("Good");
 
+    // R&C clause excluded in this fixture → should score Good (100)
+    const rcParam = evaluation.scores.find((s) => s.parameter === "reasonable_customary");
+    expect(rcParam).toBeDefined();
+    expect(rcParam?.score).toBe(100);
+    expect(rcParam?.rating).toBe("Good");
+
     // A plan with no copay, no sublimits, unlimited recharge, PED reduction should score high
     expect(evaluation.overall.weightedScore).toBeGreaterThan(80);
     expect(["A", "A+"]).toContain(evaluation.overall.grade);
@@ -56,6 +62,12 @@ describe("scoreProduct — health top-up plan", () => {
     // disease_sublimits must NOT appear for top-up plans
     const dsParam = evaluation.scores.find((s) => s.parameter === "disease_sublimits");
     expect(dsParam).toBeUndefined();
+
+    // R&C clause applies in this fixture (zone copay plan) → should score Bad (25)
+    const rcParam = evaluation.scores.find((s) => s.parameter === "reasonable_customary");
+    expect(rcParam).toBeDefined();
+    expect(rcParam?.score).toBe(25);
+    expect(rcParam?.rating).toBe("Bad");
 
     const copayScore = evaluation.scores.find((s) => s.parameter === "copay");
     expect(copayScore?.rating).toBe("OK");

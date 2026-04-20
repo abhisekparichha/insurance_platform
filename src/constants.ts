@@ -1,8 +1,10 @@
 export type ProductCategory = "health_base" | "health_topup" | "life_term" | "motor_pvt_car" | "motor_two_wheeler";
 
-// Health base plan weights — informed by Ditto (room_rent #1 at 14% of total,
-// disease_sublimits #2 at 10%, recharge #3 at 8%) and Beshak coverage research.
-// topup_friendliness is excluded: base plans do not participate in top-up mechanics.
+// Health base plan weights — informed by Source A (room_rent #1, disease_sublimits #2,
+// recharge #3), Source B coverage research, and Source C grievance data.
+// Source C: R&C clause is the primary instrument for short-settling claims
+// (95% of health complaints involve partial/total repudiation; R&C enables arbitrary
+// reductions without a published sublimit). topup_friendliness excluded for base plans.
 export const HEALTH_BASE_WEIGHTS: Record<string, number> = {
   room_rent: 0.22,
   disease_sublimits: 0.14,
@@ -11,15 +13,15 @@ export const HEALTH_BASE_WEIGHTS: Record<string, number> = {
   recharge: 0.10,
   pre_post: 0.08,
   ncb: 0.07,
-  daycare: 0.06,
-  ayush: 0.05,
-  domiciliary: 0.04,
-  sublimits: 0.02
+  reasonable_customary: 0.06,
+  daycare: 0.05,
+  ayush: 0.03,
+  domiciliary: 0.02,
+  sublimits: 0.01
 } as const;
 
-// Health top-up / super top-up weights — aggregate vs per-claim deductible structure
-// is the central value bet (Beshak: #1 for top-up). Room rent rules matter because
-// they determine proportionate exposure when the top-up activates.
+// Health top-up / super top-up weights. Source C: R&C clause also applies
+// when the top-up activates, leading to short-settled activations. Added at 4%.
 export const HEALTH_TOPUP_WEIGHTS: Record<string, number> = {
   topup_friendliness: 0.28,
   room_rent: 0.18,
@@ -28,15 +30,16 @@ export const HEALTH_TOPUP_WEIGHTS: Record<string, number> = {
   recharge: 0.08,
   pre_post: 0.07,
   ncb: 0.06,
-  daycare: 0.05,
-  ayush: 0.03,
-  domiciliary: 0.02,
+  reasonable_customary: 0.04,
+  ayush: 0.02,
+  daycare: 0.03,
+  domiciliary: 0.01,
   sublimits: 0.01
 } as const;
 
-// Term life weights — insurer reliability dominates (Ditto: CSR + ASR + solvency +
+// Term life weights — insurer reliability dominates (Source A: CSR + ASR + solvency +
 // complaints gives a 360° view). Riders and plan flexibility are the key product
-// differentiators. Beshak: ASR outranks CSR because an insurer can settle 99% of
+// differentiators. Source B: ASR outranks CSR because an insurer can settle 99% of
 // small claims while rejecting high-value ones.
 export const LIFE_TERM_WEIGHTS: Record<string, number> = {
   claim_settlement_ratio: 0.20,

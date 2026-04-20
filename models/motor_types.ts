@@ -14,13 +14,16 @@ export interface MotorIDV {
 // (either not offered or must be purchased separately at extra cost).
 export interface MotorAddOns {
   zeroDepreciation: boolean;
-  engineProtection: boolean;        // hydrostatic lock, oil leakage to engine
-  consumablesCover: boolean;        // oils, nuts, bolts during repair
-  returnToInvoice: boolean;         // gap cover: invoice value vs IDV on total loss
-  ncbProtection: boolean;           // preserves no-claim bonus after one claim
+  engineProtection: boolean;           // hydrostatic lock, oil leakage to engine
+  consumablesCover: boolean;           // oils, nuts, bolts during repair
+  returnToInvoice: boolean;            // gap cover: invoice value vs IDV on total loss
+  ncbProtection: boolean;              // preserves no-claim bonus after one claim
   roadsideAssistance: boolean;
   keyReplacement: boolean;
   tyreProtection: boolean;
+  // Source C: undeclared CNG/LPG conversion is the #2 motor rejection trigger.
+  // True when the policy explicitly endorses existing CNG/LPG kit — no mid-claim surprise.
+  cngLpgEndorsementIncluded: boolean;
 }
 
 // Two-wheeler only: personal accident cover quality for rider + pillion.
@@ -32,9 +35,10 @@ export interface PersonalAccidentCover {
 
 // Insurer reliability metrics for motor (separate from life/health CSR).
 export interface MotorInsurerMetrics {
-  motorCsr: number;            // Motor-specific claim settlement ratio (0–100)
-  complaintsPerTenK: number;   // Complaints per 10,000 motor claims
-  networkGarages: number;      // Cashless garage network size
+  motorCsr: number;                          // Motor-specific claim settlement ratio (0–100)
+  complaintsPerTenK: number;                 // Complaints per 10,000 motor claims
+  networkGarages: number;                    // Cashless garage network size
+  claimsWithin30DaysPercent: number | null;  // % of motor claims settled within IRDAI's 30-day window
 }
 
 export interface MotorProduct {

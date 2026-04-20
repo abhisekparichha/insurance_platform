@@ -332,7 +332,8 @@ function parseCopay(raw?: RawExtract["copay"]): CopayAndZones {
   return {
     mandatory,
     mandatoryPercent: percent,
-    optionalCopayAvailable: raw?.optionalAvailable ?? false
+    optionalCopayAvailable: raw?.optionalAvailable ?? false,
+    reasonableCustomaryExcluded: raw?.reasonableCustomaryExcluded ?? false
   };
 }
 
