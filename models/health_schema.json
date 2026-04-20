@@ -502,14 +502,18 @@
     "copayAndZones": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mandatory", "mandatoryPercent", "optionalCopayAvailable"],
+      "required": ["mandatory", "mandatoryPercent", "optionalCopayAvailable", "reasonableCustomaryExcluded"],
       "properties": {
         "mandatory": {
           "type": "string",
           "enum": ["none", "age", "zone", "network", "disease_specific"]
         },
         "mandatoryPercent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
-        "optionalCopayAvailable": { "type": "boolean" }
+        "optionalCopayAvailable": { "type": "boolean" },
+        "reasonableCustomaryExcluded": {
+          "type": "boolean",
+          "description": "True when the policy explicitly excludes or caps the insurer's Reasonable & Customary deduction clause. Source C identifies R&C as a leading instrument for short-settling health claims."
+        }
       },
       "allOf": [
         {

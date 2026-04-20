@@ -77,7 +77,8 @@
   "copayAndZones": {
     "mandatory": "none",
     "mandatoryPercent": null,
-    "optionalCopayAvailable": false
+    "optionalCopayAvailable": false,
+    "reasonableCustomaryExcluded": true
   },
   "sublimits": {
     "cataract": {

@@ -18,13 +18,15 @@
     "ncbProtection": true,
     "roadsideAssistance": true,
     "keyReplacement": false,
-    "tyreProtection": false
+    "tyreProtection": false,
+    "cngLpgEndorsementIncluded": false
   },
   "personalAccident": null,
   "insurer": {
     "motorCsr": 98.2,
     "complaintsPerTenK": 22,
-    "networkGarages": 13000
+    "networkGarages": 13000,
+    "claimsWithin30DaysPercent": 89
   },
   "annualPremium": 18500,
   "provenance": {

@@ -116,6 +116,9 @@ export interface CopayAndZones {
   mandatory: CopayMandatory;
   mandatoryPercent: number | null;
   optionalCopayAvailable: boolean;
+  // Source C: R&C clause is the #1 instrument used for short-settling health claims.
+  // True when the policy explicitly excludes or limits the insurer's R&C deduction power.
+  reasonableCustomaryExcluded: boolean;
 }
 
 export interface CataractSublimit {

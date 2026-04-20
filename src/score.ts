@@ -29,7 +29,8 @@ export type HealthParameterKey =
   | "sublimits"
   | "disease_sublimits"
   | "waiting_periods"
-  | "topup_friendliness";
+  | "topup_friendliness"
+  | "reasonable_customary";
 
 export type TermParameterKey =
   | "claim_settlement_ratio"
@@ -64,8 +65,8 @@ export interface Evaluation {
 
 export type TermEvaluation = Evaluation;
 
-// Base plan parameters — topup_friendliness excluded (base plans do not participate
-// in top-up mechanics and a hardcoded neutral score would bias the aggregate).
+// Base plan parameters — topup_friendliness excluded; reasonable_customary included.
+// Source C: R&C clause is the #1 grievance driver in health short-settlements.
 const HEALTH_BASE_PARAMETERS: HealthParameterKey[] = [
   "room_rent",
   "disease_sublimits",
@@ -74,14 +75,15 @@ const HEALTH_BASE_PARAMETERS: HealthParameterKey[] = [
   "recharge",
   "pre_post",
   "ncb",
+  "reasonable_customary",
   "daycare",
   "ayush",
   "domiciliary",
   "sublimits"
 ];
 
-// Top-up parameters — disease_sublimits excluded (sublimit burden is less relevant
-// when the plan only activates above a deductible threshold).
+// Top-up parameters — disease_sublimits excluded; reasonable_customary included
+// because R&C deductions also apply when the top-up activates.
 const HEALTH_TOPUP_PARAMETERS: HealthParameterKey[] = [
   "topup_friendliness",
   "room_rent",
@@ -90,6 +92,7 @@ const HEALTH_TOPUP_PARAMETERS: HealthParameterKey[] = [
   "recharge",
   "pre_post",
   "ncb",
+  "reasonable_customary",
   "daycare",
   "ayush",
   "domiciliary",
@@ -386,7 +389,20 @@ function scoreSublimits(product: HealthProduct): ScoreDetail {
   return { parameter: "sublimits", score, rating: rate(score), rationale: rationale.trim() };
 }
 
-// Scores the disease-specific sublimit burden. Ditto rates this as the 2nd most
+// Source C: the Reasonable & Customary clause allows insurers to reduce
+// claims to "market standard" rates without a stated sublimit. It was cited in 95%
+// of health repudiation complaints. Plans that explicitly exclude it — or commit
+// to a "defined benefit" structure — remove this vector for short-settlement.
+function scoreReasonableCustomary(product: HealthProduct): ScoreDetail {
+  const excluded = product.copayAndZones.reasonableCustomaryExcluded;
+  const score = excluded ? 100 : 25;
+  const rationale = excluded
+    ? "Reasonable & Customary clause excluded — no arbitrary claim reduction."
+    : "R&C clause applies — insurer can short-settle claims without a published sublimit.";
+  return { parameter: "reasonable_customary", score, rating: rate(score), rationale };
+}
+
+// Scores the disease-specific sublimit burden. Source A rates this as the 2nd most
 // important coverage feature because even a large SI is undermined by tight per-
 // disease caps on common procedures (joint replacement, cardiac care, etc.).
 function scoreDiseaseSublimits(product: HealthProduct): ScoreDetail {
@@ -508,7 +524,8 @@ const healthScorers: Record<HealthParameterKey, (product: HealthProduct) => Scor
   sublimits: scoreSublimits,
   disease_sublimits: scoreDiseaseSublimits,
   waiting_periods: scoreWaiting,
-  topup_friendliness: scoreTopUp
+  topup_friendliness: scoreTopUp,
+  reasonable_customary: scoreReasonableCustomary
 };
 
 function deriveGrade(weighted: number): "D" | "C" | "B" | "A" | "A+" {
@@ -560,7 +577,7 @@ export function scoreProduct(product: HealthProduct): Evaluation {
 
 // ── Term life scoring ─────────────────────────────────────────────────────────
 
-// Ditto benchmark: CSR >97% excellent, <95% red flag.
+// Source A benchmark: CSR >97% excellent, <95% red flag.
 function scoreCSR(product: TermProduct): ScoreDetail {
   const csr = product.insurer.csr;
   let score: number;
@@ -583,7 +600,7 @@ function scoreCSR(product: TermProduct): ScoreDetail {
   return { parameter: "claim_settlement_ratio", score, rating: rate(score), rationale };
 }
 
-// Beshak: ASR outranks CSR — an insurer can settle 99% of small claims while
+// Source B: ASR outranks CSR — an insurer can settle 99% of small claims while
 // rejecting high-value ones. ASR >90% considered good.
 function scoreASR(product: TermProduct): ScoreDetail {
   const asr = product.insurer.asr;
@@ -607,7 +624,7 @@ function scoreASR(product: TermProduct): ScoreDetail {
   return { parameter: "amount_settlement_ratio", score, rating: rate(score), rationale };
 }
 
-// IRDAI minimum 1.5x. Ditto treats anything below 1.6x as marginal.
+// IRDAI minimum 1.5x. Source A treats anything below 1.6x as marginal.
 function scoreSolvency(product: TermProduct): ScoreDetail {
   const ratio = product.insurer.solvencyRatio;
   let score: number;
@@ -633,7 +650,7 @@ function scoreSolvency(product: TermProduct): ScoreDetail {
   return { parameter: "solvency_ratio", score, rating: rate(score), rationale };
 }
 
-// Ditto benchmark: <50 complaints per 10,000 claims is a safe threshold.
+// Source A benchmark: <50 complaints per 10,000 claims is a safe threshold.
 function scoreComplaintVolume(product: TermProduct): ScoreDetail {
   const complaints = product.insurer.complaintsPerTenK;
   let score: number;
@@ -656,7 +673,7 @@ function scoreComplaintVolume(product: TermProduct): ScoreDetail {
   return { parameter: "complaint_volume", score, rating: rate(score), rationale };
 }
 
-// Key riders: Critical Illness (64+ illnesses = strong per Ditto), ADB, WOP,
+// Key riders: Critical Illness (64+ illnesses = strong per Source A), ADB, WOP,
 // Terminal Illness. Each rider adds meaningful protection at different life stages.
 function scoreRiders(product: TermProduct): ScoreDetail {
   const riders = product.riders;

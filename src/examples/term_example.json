@@ -13,7 +13,8 @@
     "csr": 99.65,
     "asr": 95.20,
     "solvencyRatio": 1.91,
-    "complaintsPerTenK": 18
+    "complaintsPerTenK": 18,
+    "claimsWithin30DaysPercent": 92
   },
   "riders": {
     "criticalIllness": {
@@ -32,6 +33,7 @@
   },
   "annualPremium": 14200,
   "benchmarkPremium": 16500,
+  "upfrontMedicalUnderwriting": true,
   "provenance": {
     "sourceType": "insurer_site",
     "sourceName": "Axis Max Life Smart Term Plan Plus Product Page",
