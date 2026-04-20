@@ -1,0 +1,36 @@
+{
+  "product": {
+    "insurer": "HDFC ERGO General Insurance",
+    "planName": "Optima Motor Comprehensive",
+    "vehicleType": "pvt_car",
+    "uin": "IRDAN125RP0001V01202223"
+  },
+  "idv": {
+    "declaredValue": 850000,
+    "estimatedMarketValue": 880000,
+    "currency": "INR"
+  },
+  "addOns": {
+    "zeroDepreciation": true,
+    "engineProtection": true,
+    "consumablesCover": true,
+    "returnToInvoice": true,
+    "ncbProtection": true,
+    "roadsideAssistance": true,
+    "keyReplacement": false,
+    "tyreProtection": false
+  },
+  "personalAccident": null,
+  "insurer": {
+    "motorCsr": 98.2,
+    "complaintsPerTenK": 22,
+    "networkGarages": 13000
+  },
+  "annualPremium": 18500,
+  "provenance": {
+    "sourceType": "insurer_site",
+    "sourceName": "HDFC ERGO Optima Motor Product Page",
+    "sourceDate": "2025-09-01",
+    "extractionConfidence": 0.88
+  }
+}
