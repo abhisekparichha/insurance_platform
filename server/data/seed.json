@@ -1,0 +1,242 @@
+{
+  "categories": [
+    { "id": "health_base",  "label": "Retail Health",          "icon": "Stethoscope", "productCount": 3 },
+    { "id": "health_topup", "label": "Top-up & Super Top-up",  "icon": "Shield",      "productCount": 2 },
+    { "id": "life_term",    "label": "Term Life",               "icon": "LifeBuoy",    "productCount": 2 },
+    { "id": "motor",        "label": "Motor",                   "icon": "Car",         "productCount": 2 }
+  ],
+  "insurers": [
+    { "id": "care-health",  "name": "Care Health Insurance",     "logoUrl": "https://dummyimage.com/64x64/1d4ed8/ffffff&text=CH", "rating": 4.6, "totalProducts": 3 },
+    { "id": "star-health",  "name": "Star Health & Allied",      "logoUrl": "https://dummyimage.com/64x64/f97316/ffffff&text=SH", "rating": 4.4, "totalProducts": 2 },
+    { "id": "hdfc-life",    "name": "HDFC Life",                  "logoUrl": "https://dummyimage.com/64x64/22c55e/ffffff&text=HL", "rating": 4.8, "totalProducts": 2 },
+    { "id": "hdfc-ergo",    "name": "HDFC ERGO General",          "logoUrl": "https://dummyimage.com/64x64/6366f1/ffffff&text=HE", "rating": 4.5, "totalProducts": 1 },
+    { "id": "bajaj-allianz","name": "Bajaj Allianz General",      "logoUrl": "https://dummyimage.com/64x64/ec4899/ffffff&text=BA", "rating": 4.3, "totalProducts": 1 }
+  ],
+  "products": [
+    {
+      "id": "care-supreme",
+      "name": "Care Supreme",
+      "insurer": "Care Health Insurance",
+      "rating": 4.7,
+      "priceFrom": 580,
+      "coverageType": "base-plan",
+      "coverageAmount": "₹5L – ₹1Cr",
+      "tags": ["no-room-cap", "unlimited-recharge", "no-copay"],
+      "categoryId": "health_base",
+      "policyExcerpt": "Single private room, unlimited recharge, no copay, and zero disease-specific sublimits — one of the cleanest base plans available.",
+      "policyDocumentUrl": "https://example.com/care-supreme-wording.pdf",
+      "highlights": ["Single private room", "Unlimited recharge", "No copay", "No disease sublimits"],
+      "description": "Care Supreme offers single private room cover with no proportionate deduction, an unlimited recharge benefit, and no mandatory copay. It excludes the Reasonable & Customary clause.",
+      "benefits": ["Single private room with no proportionate deduction", "Unlimited recharge for same and different illness", "60 / 180 pre/post hospitalisation", "PED waiting period: 36 months with reduction option"],
+      "policyWording": "Policy wording explicitly excludes R&C deductions and defines covered procedures with fixed benefit tables.",
+      "policySections": [
+        { "id": "room-rent", "title": "Room Rent", "content": "Single private room. Proportionate deduction waived via in-built cover." },
+        { "id": "recharge", "title": "Recharge Benefit", "content": "Unlimited recharge applies to same and different illness within a policy year." },
+        { "id": "waiting", "title": "Waiting Periods", "content": "PED: 36 months. Specific ailments: 24 months. Initial: 30 days." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording",  "url": "https://example.com/care-supreme-wording.pdf",  "type": "wording"  },
+        { "id": "doc-2", "label": "Brochure",         "url": "https://example.com/care-supreme-brochure.pdf", "type": "brochure" }
+      ],
+      "reviews": [
+        { "id": "r1", "rating": 5, "title": "No nasty surprises", "content": "Cashless approved in under 4 hours. Room upgrade was honoured without a proportionate cut.", "author": "Minal P.", "createdAt": "2025-01-10" },
+        { "id": "r2", "rating": 4, "title": "Great for families", "content": "Recharge kicked in automatically after we exhausted the base SI.", "author": "S. Krishnan", "createdAt": "2024-12-18" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "star-comprehensive",
+      "name": "Star Comprehensive",
+      "insurer": "Star Health & Allied",
+      "rating": 4.3,
+      "priceFrom": 650,
+      "coverageType": "base-plan",
+      "coverageAmount": "₹5L – ₹1Cr",
+      "tags": ["maternity", "hospital-cash", "opd"],
+      "categoryId": "health_base",
+      "policyExcerpt": "Maternity, newborn, OPD, and hospital cash packed in one plan — good breadth but watch the disease sublimits.",
+      "policyDocumentUrl": "https://example.com/star-comprehensive-wording.pdf",
+      "highlights": ["Maternity cover", "OPD benefit", "Hospital cash", "Newborn cover"],
+      "description": "Star Comprehensive bundles maternity, OPD, hospital cash, and newborn cover. Trade-off: several disease-specific sublimits and a 10% zone-based copay in non-home cities.",
+      "benefits": ["Maternity cover after 2 years", "OPD up to ₹5,000/year", "Hospital cash ₹1,000/day", "Newborn cover from day 1"],
+      "policyWording": "Detailed annexures per benefit bucket. R&C clause applies for OPD reimbursements.",
+      "policySections": [
+        { "id": "maternity", "title": "Maternity", "content": "After 2-year waiting period. Up to ₹50,000 normal, ₹75,000 LSCS." },
+        { "id": "copay",    "title": "Copay",     "content": "10% zone-based copay applies when treated outside home city." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/star-comprehensive-wording.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r3", "rating": 4, "title": "Maternity worked well", "content": "Smooth maternity claim but got hit by zone copay when I was travelling.", "author": "Priya D.", "createdAt": "2025-02-01" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "care-elevate",
+      "name": "Care Elevate Super Top-up",
+      "insurer": "Care Health Insurance",
+      "rating": 4.4,
+      "priceFrom": 312,
+      "coverageType": "topup-plan",
+      "coverageAmount": "₹25L – ₹1Cr",
+      "tags": ["aggregate-deductible", "global", "deductible-flex"],
+      "categoryId": "health_topup",
+      "policyExcerpt": "Aggregate annual deductible, broad coverage above threshold, and global hospitalisation add-on.",
+      "policyDocumentUrl": "https://example.com/care-elevate-wording.pdf",
+      "highlights": ["Aggregate deductible", "Flexible deductible bands", "Global OPD add-on"],
+      "description": "Care Elevate uses an aggregate annual deductible so all claims in a year count toward one threshold. Ideal for stacking above an employer group policy.",
+      "benefits": ["Deductible choices ₹1L to ₹10L", "Aggregate trigger (not per-claim)", "Optional global hospitalisation add-on"],
+      "policyWording": "Deductible tables, claim examples, and portability notes included. R&C clause excluded for IPD claims.",
+      "policySections": [
+        { "id": "deductible", "title": "Deductible",       "content": "Aggregate annual deductible. All claims in a year accumulate toward the single threshold." },
+        { "id": "coverage",   "title": "Coverage Scope",   "content": "IPD, daycare, AYUSH, and pre/post-hospitalisation covered above deductible." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/care-elevate-wording.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r4", "rating": 5, "title": "Aggregate deductible is the key", "content": "Multiple small claims in the year accumulated and eventually triggered the top-up. Per-claim would never have.", "author": "Neha R.", "createdAt": "2025-01-20" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "star-super-surplus",
+      "name": "Star Super Surplus",
+      "insurer": "Star Health & Allied",
+      "rating": 4.1,
+      "priceFrom": 290,
+      "coverageType": "topup-plan",
+      "coverageAmount": "₹10L – ₹50L",
+      "tags": ["per-claim-deductible"],
+      "categoryId": "health_topup",
+      "policyExcerpt": "Affordable top-up with per-claim deductible — good as a backup but less flexible than aggregate variants.",
+      "policyDocumentUrl": "https://example.com/star-surplus-wording.pdf",
+      "highlights": ["Low premium", "Per-claim deductible"],
+      "description": "Star Super Surplus is a cost-effective top-up. The per-claim deductible means each hospitalisation must individually cross the threshold before the top-up pays.",
+      "benefits": ["Very low premium for high SI", "Straightforward single-deductible structure"],
+      "policyWording": "Simple structure. R&C clause applies. Per-claim deductible means stacking with group cover is less seamless.",
+      "policySections": [
+        { "id": "deductible", "title": "Deductible", "content": "Per-claim deductible. Each claim must individually exceed the threshold." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/star-surplus-wording.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r5", "rating": 3, "title": "Per-claim caught me out", "content": "My two smaller claims didn't trigger the top-up individually even though they would have exceeded aggregate.", "author": "Arun K.", "createdAt": "2024-11-05" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "hdfc-life-protect",
+      "name": "HDFC Life Click 2 Protect Super",
+      "insurer": "HDFC Life",
+      "rating": 4.9,
+      "priceFrom": 512,
+      "coverageType": "term-plan",
+      "coverageAmount": "₹50L – ₹5Cr",
+      "tags": ["whole-life", "critical-illness", "limited-pay"],
+      "categoryId": "life_term",
+      "policyExcerpt": "CSR 99.5%, whole-life option, CI rider covering 60 illnesses, limited-pay available.",
+      "policyDocumentUrl": "https://example.com/hdfc-life-protect.pdf",
+      "highlights": ["CSR 99.5%", "Whole-life option", "CI rider 60 illnesses", "Limited pay"],
+      "description": "A strong term plan with excellent insurer metrics. CI rider covers 60 critical illnesses. Whole-life and limited-pay options available. Upfront underwriting reduces post-claim disputes.",
+      "benefits": ["Whole-life coverage option", "Critical illness rider: 60 illnesses", "Waiver of premium on disability", "Staggered payout for income replacement"],
+      "policyWording": "Exclusions clearly defined. Suicide clause: 1 year. Non-disclosure contestability: 3 years per IRDAI mandate.",
+      "policySections": [
+        { "id": "riders",    "title": "Riders",    "content": "CI rider (60 illnesses), ADB, WOP on disability or CI, terminal illness payout." },
+        { "id": "exclusions","title": "Exclusions","content": "Suicide within first year. Death due to declared hazardous activity. Non-disclosure: contestable within 3 years." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/hdfc-life-protect.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r6", "rating": 5, "title": "Smooth claim process", "content": "Claim settled within 10 days. The upfront medical underwriting meant no disputes.", "author": "Ravi S.", "createdAt": "2025-03-01" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "max-life-smart",
+      "name": "Max Life Smart Secure Plus",
+      "insurer": "Max Life Insurance",
+      "rating": 4.7,
+      "priceFrom": 480,
+      "coverageType": "term-plan",
+      "coverageAmount": "₹50L – ₹10Cr",
+      "tags": ["joint-life", "return-of-premium", "critical-illness"],
+      "categoryId": "life_term",
+      "policyExcerpt": "CSR 99.3%, joint-life option, return-of-premium variant, CI rider covering 64 illnesses.",
+      "policyDocumentUrl": "https://example.com/max-life-smart.pdf",
+      "highlights": ["CSR 99.3%", "Joint life option", "CI rider 64 illnesses", "Return of premium"],
+      "description": "Max Life Smart Secure Plus differentiates with a joint-life option for couples and a return-of-premium variant. CI rider covers 64 illnesses — among the broadest in the market.",
+      "benefits": ["Joint life cover for couples", "Return of premium on survival", "CI rider: 64 illnesses", "Whole-life option"],
+      "policyWording": "Comprehensive wording. Upfront tele-medical underwriting done at issuance.",
+      "policySections": [
+        { "id": "joint-life", "title": "Joint Life", "content": "Single policy covers two lives. Payout on first death; second life continues at no extra premium for 2 years." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/max-life-smart.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r7", "rating": 5, "title": "Joint life is a great value", "content": "Both my spouse and I covered under one policy. CI payout was swift.", "author": "Kavya M.", "createdAt": "2025-02-14" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "hdfc-ergo-optima-motor",
+      "name": "HDFC ERGO Optima Motor Comprehensive",
+      "insurer": "HDFC ERGO General",
+      "rating": 4.5,
+      "priceFrom": 18500,
+      "coverageType": "motor-car",
+      "coverageAmount": "IDV ₹8.5L",
+      "tags": ["zero-depreciation", "engine-protect", "consumables", "ncb-protect"],
+      "categoryId": "motor",
+      "policyExcerpt": "Zero depreciation, engine protection, consumables, RTI, and NCB protection — the full add-on stack.",
+      "policyDocumentUrl": "https://example.com/hdfc-ergo-optima.pdf",
+      "highlights": ["Zero depreciation", "Engine protection", "Consumables cover", "Return to invoice", "NCB protection"],
+      "description": "HDFC ERGO Optima Comprehensive bundles all key add-ons: zero depreciation, engine protection, consumables, return to invoice, NCB protection, and 24/7 RSA. 13,000+ cashless garages.",
+      "benefits": ["Zero depreciation on all parts", "Engine protection: hydrostatic lock + oil leakage", "Consumables covered", "RTI on total loss", "NCB protected after one claim"],
+      "policyWording": "Standard IRDAI motor policy wording. Exclusions: drunk driving, unlicensed driver, undeclared modifications.",
+      "policySections": [
+        { "id": "own-damage", "title": "Own Damage",       "content": "Full own damage cover with all add-ons. ZD eliminates depreciation deduction on replaced parts." },
+        { "id": "exclusions", "title": "Key Exclusions",   "content": "Undeclared CNG/LPG modification. Driving under influence. Invalid licence." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/hdfc-ergo-optima.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r8", "rating": 5, "title": "Engine claim fully paid", "content": "Hydrostatic lock after flooding. Engine protection covered the full ₹1.4L repair without depreciation deduction.", "author": "Dinesh V.", "createdAt": "2025-03-15" }
+      ],
+      "scorecard": []
+    },
+    {
+      "id": "bajaj-2w-package",
+      "name": "Bajaj Allianz Two Wheeler Package",
+      "insurer": "Bajaj Allianz General",
+      "rating": 4.3,
+      "priceFrom": 3200,
+      "coverageType": "motor-2w",
+      "coverageAmount": "IDV ₹95K",
+      "tags": ["zero-depreciation", "pillion-cover", "ncb-protect"],
+      "categoryId": "motor",
+      "policyExcerpt": "Zero depreciation, NCB protection, and pillion PA cover — strong 2-wheeler package.",
+      "policyDocumentUrl": "https://example.com/bajaj-2w-package.pdf",
+      "highlights": ["Zero depreciation", "Pillion PA cover", "NCB protection", "24/7 RSA"],
+      "description": "Bajaj Allianz Two Wheeler Package provides zero depreciation, NCB protection, consumables, RSA, and personal accident cover for rider (₹15L) and pillion (₹1L).",
+      "benefits": ["Zero depreciation", "Rider PA: ₹15L", "Pillion PA: ₹1L", "NCB protected after one claim", "24/7 roadside assistance"],
+      "policyWording": "Standard motor wording. Undeclared CNG conversion voids own-damage claims.",
+      "policySections": [
+        { "id": "pa-cover",   "title": "Personal Accident", "content": "Rider: ₹15L mandatory PA. Pillion: ₹1L optional PA add-on." },
+        { "id": "exclusions", "title": "Key Exclusions",    "content": "Undeclared modification. Driving without valid licence. Racing." }
+      ],
+      "documents": [
+        { "id": "doc-1", "label": "Policy Wording", "url": "https://example.com/bajaj-2w-package.pdf", "type": "wording" }
+      ],
+      "reviews": [
+        { "id": "r9", "rating": 4, "title": "ZD made the repair worthwhile", "content": "Minor accident would have cost ₹8K out-of-pocket without zero dep. Paid ₹0.", "author": "Arjun T.", "createdAt": "2025-01-28" }
+      ],
+      "scorecard": []
+    }
+  ]
+}
