@@ -2,8 +2,7 @@ import express, { type Request, type Response, type NextFunction } from "express
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createReadStream, existsSync } from "fs";
-import { readFile } from "fs/promises";
+import { existsSync } from "fs";
 
 import { scoreProduct } from "../src/score.js";
 import { scoreTermProduct } from "../src/score.js";
@@ -11,41 +10,16 @@ import { scoreMotorProduct } from "../src/score.js";
 import { validateHealthProduct } from "../models/health_types.js";
 import type { TermProduct } from "../models/term_types.js";
 import type { MotorProduct } from "../models/motor_types.js";
+import { getDataSource, getSourceLabel, type ProductDetail, type ProductSummary } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3001);
 const FRONTEND_DIST = path.join(__dirname, "../frontend/dist");
 
-// ── Seed data ──────────────────────────────────────────────────────────────────
-
-const seedPath = path.join(__dirname, "data/seed.json");
-const seed: {
-  categories: Category[];
-  insurers: Insurer[];
-  products: ProductDetail[];
-} = JSON.parse(await readFile(seedPath, "utf-8"));
-
 // ── Frontend types (mirrors frontend/src/types/index.ts) ──────────────────────
 
-type Category = { id: string; label: string; icon: string; productCount: number };
-type Insurer  = { id: string; name: string; logoUrl?: string; rating: number; totalProducts: number };
-type Review   = { id: string; rating: number; title: string; content: string; author: string; createdAt: string };
-type PolicySection = { id: string; title: string; content: string; anchors?: Array<{ id: string; label: string }> };
-type PolicyDocument = { id: string; label: string; url: string; type: "wording" | "brochure" | "faq" };
-type PolicyScore = { id: string; label: string; status: "excellent" | "good" | "warning" | "critical"; summary: string; weight: number };
-
-type ProductSummary = {
-  id: string; name: string; insurer: string; rating: number; priceFrom: number;
-  coverageType: string; coverageAmount: string; tags: string[]; categoryId: string;
-  policyExcerpt: string; policyDocumentUrl: string; highlights: string[];
-  lastReview?: Review;
-};
-
-type ProductDetail = ProductSummary & {
-  description: string; benefits: string[]; policyWording: string;
-  policySections: PolicySection[]; documents: PolicyDocument[];
-  reviews: Review[]; scorecard: PolicyScore[];
-};
+type Category    = import("./db.js").Category;
+type PolicyScore = import("./db.js").PolicyScore;
 
 type ProductQuery = {
   categoryId?: string; search?: string;
@@ -82,8 +56,8 @@ function parameterLabel(param: string): string {
 
 // ── Product filtering + sorting ───────────────────────────────────────────────
 
-function filterProducts(q: ProductQuery): ProductDetail[] {
-  return seed.products.filter((p) => {
+function filterProducts(products: ProductDetail[], q: ProductQuery): ProductDetail[] {
+  return products.filter((p) => {
     if (q.categoryId && p.categoryId !== q.categoryId) return false;
     if (q.insurers?.length && !q.insurers.includes(p.insurer)) return false;
     if (q.coverageTypes?.length && !q.coverageTypes.includes(p.coverageType)) return false;
@@ -119,7 +93,8 @@ app.use(express.json({ limit: "1mb" }));
 
 // ── GET /categories ────────────────────────────────────────────────────────────
 
-app.get("/categories", (_req: Request, res: Response) => {
+app.get("/categories", async (_req: Request, res: Response) => {
+  const seed = await getDataSource();
   const categories = seed.categories.map((cat) => ({
     ...cat,
     productCount: seed.products.filter((p) => p.categoryId === cat.id).length
@@ -129,13 +104,16 @@ app.get("/categories", (_req: Request, res: Response) => {
 
 // ── GET /insurers ─────────────────────────────────────────────────────────────
 
-app.get("/insurers", (_req: Request, res: Response) => {
+app.get("/insurers", async (_req: Request, res: Response) => {
+  const seed = await getDataSource();
   res.json(seed.insurers);
 });
 
 // ── GET /products ─────────────────────────────────────────────────────────────
 
-app.get("/products", (req: Request, res: Response) => {
+app.get("/products", async (req: Request, res: Response) => {
+  const seed = await getDataSource();
+
   const q: ProductQuery = {
     categoryId:    req.query.categoryId as string | undefined,
     search:        req.query.search     as string | undefined,
@@ -147,7 +125,7 @@ app.get("/products", (req: Request, res: Response) => {
     pageSize:      req.query.pageSize ? Number(req.query.pageSize) : 8
   };
 
-  const filtered = sortProducts(filterProducts(q), q.sort);
+  const filtered = sortProducts(filterProducts(seed.products, q), q.sort);
   const page     = q.page!;
   const pageSize = q.pageSize!;
   const start    = (page - 1) * pageSize;
@@ -162,7 +140,8 @@ app.get("/products", (req: Request, res: Response) => {
 
 // ── GET /products/:id ─────────────────────────────────────────────────────────
 
-app.get("/products/:id", (req: Request, res: Response) => {
+app.get("/products/:id", async (req: Request, res: Response) => {
+  const seed = await getDataSource();
   const product = seed.products.find((p) => p.id === req.params.id);
   if (!product) return void res.status(404).json({ error: "Product not found" });
   res.json(product);
@@ -170,17 +149,18 @@ app.get("/products/:id", (req: Request, res: Response) => {
 
 // ── GET /search/suggestions ────────────────────────────────────────────────────
 
-app.get("/search/suggestions", (req: Request, res: Response) => {
+app.get("/search/suggestions", async (req: Request, res: Response) => {
   const term = (req.query.search as string ?? "").toLowerCase();
   if (!term) return void res.json([]);
 
+  const seed = await getDataSource();
   const suggestions = seed.products
     .filter((p) => p.name.toLowerCase().includes(term) || p.insurer.toLowerCase().includes(term))
     .slice(0, 6)
     .map((p) => ({
       id:            p.id,
       name:          p.name,
-      categoryLabel: seed.categories.find((c) => c.id === p.categoryId)?.label ?? "All",
+      categoryLabel: seed.categories.find((c: Category) => c.id === p.categoryId)?.label ?? "All",
       rating:        p.rating
     }));
 
@@ -243,8 +223,14 @@ app.post("/api/score/motor", (req: Request, res: Response) => {
 
 // ── GET /api/health ────────────────────────────────────────────────────────────
 
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.json({ status: "ok", products: seed.products.length, ts: new Date().toISOString() });
+app.get("/api/health", async (_req: Request, res: Response) => {
+  const seed = await getDataSource();
+  res.json({
+    status:     "ok",
+    products:   seed.products.length,
+    dataSource: getSourceLabel(),
+    ts:         new Date().toISOString()
+  });
 });
 
 // ── Serve built frontend (production) ─────────────────────────────────────────

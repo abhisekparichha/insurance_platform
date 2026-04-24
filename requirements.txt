@@ -1,3 +1,5 @@
 beautifulsoup4==4.12.3
 pdfminer.six==20231228
 requests==2.32.3
+aiohttp>=3.9.0
+apscheduler>=3.10.4
