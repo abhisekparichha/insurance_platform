@@ -37,7 +37,7 @@ pnpm install --silent
 echo "  [2/3] Building frontend..."
 cd "$ROOT_DIR/frontend"
 pnpm install --silent
-pnpm build --silent
+pnpm build
 cd "$ROOT_DIR"
 
 # 3. Start server

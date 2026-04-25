@@ -14,14 +14,11 @@ import {
   mockFetchSearchSuggestions
 } from './mockData';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 const FORCE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
-const useMocks = FORCE_MOCKS || !API_BASE_URL;
+const useMocks = FORCE_MOCKS || import.meta.env.VITE_API_BASE_URL === undefined;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_BASE_URL) {
-    throw new Error('API base URL is not defined. Provide VITE_API_BASE_URL or enable mocks.');
-  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
