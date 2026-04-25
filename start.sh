@@ -17,6 +17,12 @@ set -e
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PORT="${PORT:-3001}"
+VENV="$ROOT_DIR/.venv"
+
+# Activate Python venv if present (created by install.sh)
+if [ -d "$VENV" ]; then
+    source "$VENV/bin/activate"
+fi
 
 echo ""
 echo "  Insurance Platform — Production Start"

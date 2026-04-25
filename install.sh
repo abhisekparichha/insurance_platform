@@ -46,14 +46,16 @@ if ! command -v pnpm &>/dev/null; then
 fi
 ok "pnpm $(pnpm --version)"
 
-# ── 4. Python dependencies ─────────────────────────────────────────────────────
+# ── 4. Python dependencies (venv) ─────────────────────────────────────────────
 log "Installing Python dependencies..."
 if [ ! -d "$INSTALL_DIR" ]; then
     git clone "$REPO_URL" "$INSTALL_DIR" -q
 fi
 cd "$INSTALL_DIR"
-pip install -r requirements.txt -q
-ok "Python dependencies installed"
+python3 -m venv .venv
+.venv/bin/pip install -q --upgrade pip
+.venv/bin/pip install -q -r requirements.txt
+ok "Python dependencies installed (venv at $INSTALL_DIR/.venv)"
 
 # ── 5. Build & start ───────────────────────────────────────────────────────────
 log "Building frontend and starting server..."
