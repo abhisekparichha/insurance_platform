@@ -1,17 +1,12 @@
+@import './tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #0f172a;
-  background-color: #f1f5f9;
-}
-
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #0f172a 0%, #020617 35%, #0f172a 100%);
 }
 
 #root {
@@ -19,16 +14,31 @@ body {
 }
 
 .scroll-area {
-  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  scrollbar-color: var(--border-strong) transparent;
   scrollbar-width: thin;
 }
 
 .scroll-area::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+  height: 6px;
+  width: 6px;
 }
 
 .scroll-area::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.6);
+  background-color: var(--border-strong);
   border-radius: 999px;
+}
+
+/* Serif headings utility */
+.font-serif-heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-optical-sizing: auto;
+}
+
+/* Gold underline accent */
+.gold-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
 }

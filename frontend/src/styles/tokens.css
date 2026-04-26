@@ -1,0 +1,130 @@
+/* ── Design tokens — 4 display variants ──────────────────────────────────── */
+
+/* Classic (default): parchment background, navy header, gold accents, serif */
+:root,
+[data-variant='classic'] {
+  --bg-page: #faf7f0;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #f5f1e8;
+  --bg-navy: #0c2340;
+  --bg-navy-soft: #1a3a5c;
+
+  --text-base: #1a1a2e;
+  --text-muted: #4a4a6a;
+  --text-faint: #8a8aaa;
+  --text-on-navy: #faf7f0;
+  --text-on-navy-muted: #a0b4cc;
+
+  --accent: #c49a22;
+  --accent-soft: #f5e8c0;
+  --accent-text: #7a5e0a;
+  --accent-border: #dbb83a;
+
+  --border: #e4dfd4;
+  --border-strong: #c8c0b2;
+
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-card: 0.5rem;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 2px 12px -4px rgba(26, 26, 46, 0.12);
+  --shadow-raised: 0 4px 24px -8px rgba(26, 26, 46, 0.18);
+}
+
+/* Quiet: minimal, pure white, very clean lines */
+[data-variant='quiet'] {
+  --bg-page: #ffffff;
+  --bg-surface: #fafafa;
+  --bg-surface-raised: #f4f4f5;
+  --bg-navy: #18181b;
+  --bg-navy-soft: #27272a;
+
+  --text-base: #18181b;
+  --text-muted: #52525b;
+  --text-faint: #a1a1aa;
+  --text-on-navy: #ffffff;
+  --text-on-navy-muted: #a1a1aa;
+
+  --accent: #2563eb;
+  --accent-soft: #eff6ff;
+  --accent-text: #1d4ed8;
+  --accent-border: #3b82f6;
+
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  --radius-card: 0.75rem;
+}
+
+/* Editorial: magazine-style, dramatic proportions */
+[data-variant='editorial'] {
+  --bg-page: #f9f6f1;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #f3efe8;
+  --bg-navy: #1c0a3a;
+  --bg-navy-soft: #2d1554;
+
+  --text-base: #1c0a3a;
+  --text-muted: #4a3a5e;
+  --text-faint: #9a8aae;
+  --text-on-navy: #f9f6f1;
+  --text-on-navy-muted: #b09ac8;
+
+  --accent: #e85d04;
+  --accent-soft: #fde8d4;
+  --accent-text: #9c3200;
+  --accent-border: #f97316;
+
+  --border: #e8e0d4;
+  --border-strong: #d4c8b4;
+
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --radius-card: 0.25rem;
+}
+
+/* Dense: compact, information-rich, small text scale */
+[data-variant='dense'] {
+  --bg-page: #f8f9fa;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #f1f3f5;
+  --bg-navy: #0d1b2a;
+  --bg-navy-soft: #1b2d3e;
+
+  --text-base: #0d1b2a;
+  --text-muted: #3d5166;
+  --text-faint: #7d99b2;
+  --text-on-navy: #f8f9fa;
+  --text-on-navy-muted: #8099b2;
+
+  --accent: #0077cc;
+  --accent-soft: #e8f4ff;
+  --accent-text: #005599;
+  --accent-border: #0099ee;
+
+  --border: #dee2e6;
+  --border-strong: #ced4da;
+
+  --radius-card: 0.25rem;
+}
+
+/* ── Global reset for tokens ────────────────────────────────────────────── */
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-base);
+  font-family: var(--font-body);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Meter animation helper */
+.meter-bar {
+  animation: meter-fill 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes meter-fill {
+  from { width: 0% }
+  to   { width: var(--meter-width, 0%) }
+}
