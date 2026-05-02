@@ -1,9 +1,9 @@
 {
   "product": {
-    "insurer": "Acme Health Insurance",
-    "planName": "Acme Shield Health",
+    "insurer": "Care Health Insurance",
+    "planName": "Care Supreme",
     "variant": "Prime",
-    "uin": "ACMHLIPR2025V01",
+    "uin": "CARESUPH2023V01",
     "policyType": "Floater",
     "isTopUp": false,
     "geography": "IN"
@@ -103,7 +103,7 @@
   },
   "provenance": {
     "sourceType": "policy_pdf",
-    "sourceName": "Acme Shield Health Brochure",
+    "sourceName": "Care Supreme Brochure",
     "sourceDate": "2025-10-01",
     "extractionConfidence": 0.9
   },

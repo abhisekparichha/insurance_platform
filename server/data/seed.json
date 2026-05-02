@@ -158,7 +158,7 @@
     {
       "id": "max-life-smart",
       "name": "Max Life Smart Secure Plus",
-      "insurer": "Max Life Insurance",
+      "insurer": "Axis Max Life Insurance Limited",
       "rating": 4.7,
       "priceFrom": 480,
       "coverageType": "term-plan",
@@ -184,7 +184,7 @@
     },
     {
       "id": "hdfc-ergo-optima-motor",
-      "name": "HDFC ERGO Optima Motor Comprehensive",
+      "name": "HDFC ERGO Comprehensive Car Insurance",
       "insurer": "HDFC ERGO General",
       "rating": 4.5,
       "priceFrom": 18500,
