@@ -13,30 +13,30 @@ Algorithm:
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
 import requests
 from bs4 import BeautifulSoup
 
-from .models import Insurer, Product, ProductDocument
+from .models import Insurer
 from .utils import slugify
 
-# Try to import Playwright for bot-protection bypass
 try:
-    from playwright.sync_api import sync_playwright, Page
+    from playwright.sync_api import sync_playwright
     HAS_PLAYWRIGHT = True
 except ImportError:
     HAS_PLAYWRIGHT = False
-    Page = None  # type: ignore
 
 LOGGER = logging.getLogger(__name__)
+
+# Chromium executable installed in this environment
+_CHROMIUM_EXECUTABLE = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -45,45 +45,75 @@ UA = (
 
 # ─── Category classification ─────────────────────────────────────────────────
 
-CATEGORY_URL_PATTERNS: List[Tuple[str, str]] = [
-    ("health", ["health-insurance", "health", "medical", "mediclaim", "medi"]),
-    ("motor",  ["motor-insurance", "motor", "car-insurance", "auto", "vehicle",
-                "two-wheeler", "bike", "car"]),
-    ("travel", ["travel-insurance", "travel"]),
-    ("home",   ["home-insurance", "home", "property-insurance", "property"]),
-    ("life",   ["life-insurance", "life", "term-insurance", "term",
-                "personal-accident", "accident"]),
+# Ordered by priority for slug detection
+CATEGORY_URL_PATTERNS: List[Tuple[str, List[str]]] = [
+    ("health",  ["health-insurance", "health", "medical", "mediclaim", "medi"]),
+    ("motor",   ["motor-insurance", "motor", "car-insurance", "two-wheeler",
+                 "vehicle", "auto", "car", "bike"]),
+    ("travel",  ["travel-insurance", "travel"]),
+    ("home",    ["home-insurance", "home", "property-insurance", "property"]),
+    ("life",    ["life-insurance", "life", "term-insurance", "term",
+                 "personal-accident", "accident", "ulip"]),
+    ("cyber",   ["cyber-insurance", "cyber"]),
 ]
 
-# Document hub URL patterns to probe (ordered by priority)
+# Category path segments to probe (first entry is tried first)
+CATEGORY_SEGMENTS: Dict[str, List[str]] = {
+    "health":  ["health-insurance", "health"],
+    "motor":   ["motor-insurance", "motor", "car-insurance"],
+    "travel":  ["travel-insurance", "travel"],
+    "home":    ["home-insurance", "home"],
+    "life":    ["life-insurance", "life", "term-insurance"],
+    "cyber":   ["cyber-insurance", "cyber"],
+}
+
+# Document hub patterns (tried in order; first successful wins per category)
 DOC_HUB_PATTERNS = [
-    "/download/policy-wordings/{cat}/",       # HDFC ERGO style
+    "/download/policy-wordings/{cat}/",     # HDFC ERGO style
     "/downloads/policy-wordings/{cat}/",
     "/download/policy-wording/{cat}/",
-    "/download/brochures/{cat}/",             # Brochure hub
+    "/downloads/policy-wording/{cat}/",
+    "/download/brochures/{cat}/",
     "/downloads/brochures/{cat}/",
-    "/download/brochures/",
-    "/downloads/",                            # Generic download hub
+    "/download/{cat}/",
+    "/downloads/{cat}/",
+    "/download/policy-wordings/",           # Generic (no category in URL)
+    "/downloads/policy-wordings/",
+    "/downloads/",                          # ICICI Lombard style
     "/download/",
+    "/documents/",
+    "/resources/",
 ]
 
-CATEGORY_SEGMENTS = {
-    "health": ["health", "health-insurance"],
-    "motor":  ["motor", "motor-insurance", "auto"],
-    "travel": ["travel", "travel-insurance"],
-    "home":   ["home", "home-insurance", "property"],
-    "life":   ["life", "life-insurance", "personal-accident"],
-}
-
-DOCUMENT_TYPE_HINTS = {
+DOCUMENT_TYPE_HINTS: Dict[str, List[str]] = {
     "policy_wording": [
         "policy-wording", "policy_wording", "policywording",
-        "policy-document", "policy-schedule", "schedule",
-        "terms-conditions", "terms_and_conditions",
+        "policy-document", "policy-schedule", "policy-wordings",
+        "terms-conditions", "terms_and_conditions", "terms-and-conditions",
+        "wording",
     ],
-    "brochure": ["brochure", "leaflet", "product-brochure", "sales-brochure"],
+    "brochure": [
+        "brochure", "leaflet", "product-brochure", "sales-brochure",
+    ],
     "prospectus": ["prospectus"],
+    "rider":      ["rider", "addendum", "endorsement"],
 }
+
+# Slugs that are definitely not product names
+_NON_PRODUCT_SLUGS = frozenset({
+    "about", "about-us", "contact", "contact-us", "blog", "news",
+    "faq", "faqs", "careers", "login", "register", "claim", "claims",
+    "download", "downloads", "sitemap", "terms", "terms-conditions",
+    "privacy", "privacy-policy", "disclaimer", "help", "support",
+    "investor", "media", "press", "corporate", "investor-relations",
+    "gallery", "awards", "testimonials", "network-hospitals",
+    "network", "hospital-finder", "cashless", "grievance",
+    "renewal", "renew", "pay-premium", "premium-payment",
+    "products", "all-products", "all-plans", "compare",
+    "tax-benefit", "tax", "calculator", "calculators",
+    "agents", "agent", "posp", "partner", "partners",
+    "locate-branch", "branch", "branches", "locate",
+})
 
 
 # ─── Data structures ──────────────────────────────────────────────────────────
@@ -94,8 +124,8 @@ class DiscoveredProduct:
     slug: str
     url: str
     category: str
-    source: str  # "sitemap" | "category_page" | "nav_link"
-    documents: List[DiscoveredDocument] = field(default_factory=list)
+    source: str   # "sitemap" | "category_page" | "nav_link"
+    documents: List["DiscoveredDocument"] = field(default_factory=list)
 
 
 @dataclass
@@ -103,7 +133,7 @@ class DiscoveredDocument:
     url: str
     doc_type: str
     filename: str
-    product_slug: str
+    product_slug: str   # best-guess product slug from filename
 
 
 @dataclass
@@ -124,35 +154,38 @@ class InsurerProductSearcher:
 
     def __init__(
         self,
-        timeout: int = 15,
+        timeout: int = 20,
         delay: float = 0.5,
-        dry_run: bool = False,
         use_browser: bool = False,
+        chromium_executable: Optional[str] = None,
     ) -> None:
         self.timeout = timeout
         self.delay = delay
-        self.dry_run = dry_run  # when True: probe URLs but don't parse HTML
         self.use_browser = use_browser and HAS_PLAYWRIGHT
+        self._chromium = chromium_executable or _CHROMIUM_EXECUTABLE
         self._session = requests.Session()
         self._session.headers.update({
             "User-Agent": UA,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Language": "en-IN,en-US;q=0.9,en;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
         })
-        self._browser_context = None
-        self._browser_page = None
 
     # ── Public entry point ────────────────────────────────────────────────────
 
     def search(self, insurer: Insurer) -> SearchResult:
+        """Run the full 5-step product discovery pipeline for one insurer."""
         root = insurer.website_url.rstrip("/")
         result = SearchResult(
             insurer_id=insurer.insurer_id,
             insurer_name=insurer.name,
             website_url=root,
         )
-
         if not root:
             result.errors.append("no_website_url")
             return result
@@ -161,27 +194,30 @@ class InsurerProductSearcher:
         sitemap_products = self._discover_via_sitemap(root)
         result.stats["sitemap_products"] = len(sitemap_products)
 
-        # Step 2 — category page discovery (fallback / supplement)
+        # Step 2 — category page discovery (supplements / fallback for sitemap)
         category_products = self._discover_via_category_pages(root)
         result.stats["category_page_products"] = len(category_products)
 
-        # Merge: prefer sitemap entries, supplement with category page ones
-        seen_slugs: Dict[str, DiscoveredProduct] = {}
-        for p in sitemap_products + category_products:
+        # Merge: prefer sitemap, add new ones from category pages
+        seen_slugs: Dict[str, DiscoveredProduct] = {
+            p.slug: p for p in sitemap_products
+        }
+        for p in category_products:
             if p.slug not in seen_slugs:
                 seen_slugs[p.slug] = p
         all_products = list(seen_slugs.values())
 
         # Step 3 — document hub discovery
         hub_docs = self._discover_document_hubs(root, all_products)
-        result.doc_hub_urls = list({d.url for d in hub_docs})
+        result.doc_hub_urls = sorted({d.url for d in hub_docs})
         result.stats["hub_docs"] = len(hub_docs)
 
         # Step 4 — attach documents to products
         self._attach_documents(all_products, hub_docs)
 
-        # Step 5 — collect any inline links from product pages
-        self._enrich_from_product_pages(root, all_products)
+        # Step 5 — enrich under-documented products from their own pages
+        if all_products:
+            self._enrich_from_product_pages(root, all_products)
 
         result.products = all_products
         result.stats["total_products"] = len(all_products)
@@ -194,24 +230,21 @@ class InsurerProductSearcher:
 
     def _discover_via_sitemap(self, root: str) -> List[DiscoveredProduct]:
         products: List[DiscoveredProduct] = []
-        for path in ["/sitemap.xml", "/sitemap_index.xml", "/sitemap/"]:
-            url = root + path
-            xml = self._get_text(url)
+        for path in ("/sitemap.xml", "/sitemap_index.xml", "/sitemap/"):
+            xml = self._get_text(root + path)
             if not xml:
                 continue
-            urls = self._parse_sitemap_xml(xml, root, url)
-            for loc in urls:
+            locs = self._parse_sitemap_xml(xml, root)
+            for loc in locs:
                 p = self._url_to_product(loc)
                 if p:
                     products.append(p)
             if products:
-                LOGGER.info("Sitemap found %d products at %s", len(products), url)
+                LOGGER.info("Sitemap at %s → %d products", root + path, len(products))
                 break
         return products
 
-    def _parse_sitemap_xml(
-        self, xml_text: str, root: str, sitemap_url: str
-    ) -> List[str]:
+    def _parse_sitemap_xml(self, xml_text: str, root: str) -> List[str]:
         urls: List[str] = []
         try:
             root_el = ElementTree.fromstring(xml_text)
@@ -221,13 +254,15 @@ class InsurerProductSearcher:
         ns_match = re.match(r"\{([^}]+)\}", root_el.tag)
         ns = ns_match.group(0) if ns_match else ""
 
-        # Handle sitemap index (recurse one level)
         for loc_el in root_el.findall(f".//{ns}loc"):
             loc = (loc_el.text or "").strip()
+            if not loc:
+                continue
             if loc.endswith(".xml"):
+                # Sitemap index — recurse one level
                 child_xml = self._get_text(loc)
                 if child_xml:
-                    urls.extend(self._parse_sitemap_xml(child_xml, root, loc))
+                    urls.extend(self._parse_sitemap_xml(child_xml, root))
             else:
                 urls.append(loc)
         return urls
@@ -238,17 +273,14 @@ class InsurerProductSearcher:
         products: List[DiscoveredProduct] = []
         for category, segs in CATEGORY_SEGMENTS.items():
             for seg in segs:
-                url = f"{root}/{seg}/"
-                html = self._get_text(url)
-                if not html:
-                    url = f"{root}/{seg}"
-                    html = self._get_text(url)
+                html = self._get_text_variants(root, f"/{seg}")
                 if not html:
                     continue
-                products.extend(
-                    self._extract_products_from_page(html, url, category, root)
-                )
-                break  # first segment that responds is enough per category
+                found = self._extract_products_from_page(html, f"{root}/{seg}", category, root)
+                products.extend(found)
+                if found:
+                    LOGGER.info("Category page /%s → %d products", seg, len(found))
+                break  # first responsive segment wins
         return products
 
     def _extract_products_from_page(
@@ -263,7 +295,6 @@ class InsurerProductSearcher:
             abs_url = urljoin(page_url, href)
             if not abs_url.startswith(root):
                 continue
-
             p = self._url_to_product(abs_url, hint_category=category)
             if p and p.slug not in seen:
                 seen.add(p.slug)
@@ -280,58 +311,46 @@ class InsurerProductSearcher:
         path = parsed.path.rstrip("/")
         parts = [p for p in path.split("/") if p]
 
-        # Need at least /cat/product format
         if len(parts) < 2:
             return None
 
-        # Try to identify the category segment and product segment
+        # Find the first category segment in the path
         category: Optional[str] = None
-        product_seg_idx: int = -1
-
+        product_idx: int = -1
         for i, part in enumerate(parts):
             detected = self._detect_category(part)
             if detected:
                 category = detected
                 if i + 1 < len(parts):
-                    product_seg_idx = i + 1
+                    product_idx = i + 1
                 break
 
         if not category:
-            if hint_category:
+            if hint_category and len(parts) >= 1:
                 category = hint_category
-                product_seg_idx = len(parts) - 1
+                product_idx = len(parts) - 1
             else:
                 return None
 
-        if product_seg_idx < 0 or product_seg_idx >= len(parts):
+        if product_idx < 0 or product_idx >= len(parts):
             return None
 
-        slug = parts[product_seg_idx]
-
-        # Skip known non-product slugs
-        skip = {
-            "about", "about-us", "contact", "contact-us", "blog", "news",
-            "faq", "faqs", "careers", "login", "register", "claim",
-            "claims", "download", "downloads", "sitemap", "terms",
-            "privacy", "disclaimer", "help", "support", "investor",
-            "media", "press", "corporate", "investor-relations", "gallery",
-        }
-        if slug in skip or len(slug) < 4:
+        slug = parts[product_idx]
+        if slug in _NON_PRODUCT_SLUGS or len(slug) < 4:
+            return None
+        # Skip numeric-only segments and very generic ones
+        if re.fullmatch(r"[\d\-]+", slug):
             return None
 
-        name = " ".join(w.capitalize() for w in slug.split("-"))
+        name = " ".join(w.capitalize() for w in slug.replace("-", " ").split())
         return DiscoveredProduct(
-            name=name,
-            slug=slug,
-            url=url,
-            category=category,
-            source="sitemap",
+            name=name, slug=slug, url=url, category=category, source="sitemap",
         )
 
     def _detect_category(self, segment: str) -> Optional[str]:
         seg = segment.lower()
         for cat, patterns in CATEGORY_URL_PATTERNS:
-            if any(pat in seg for pat in patterns):
+            if any(pat in seg or seg in pat for pat in patterns):
                 return cat
         return None
 
@@ -343,8 +362,10 @@ class InsurerProductSearcher:
         docs: List[DiscoveredDocument] = []
         probed: set = set()
 
+        # Build category list; if no products found yet, try all categories
         categories = list({p.category for p in products}) or list(CATEGORY_SEGMENTS)
 
+        # First try category-specific patterns
         for cat in categories:
             for cat_seg in CATEGORY_SEGMENTS.get(cat, [cat]):
                 for pattern in DOC_HUB_PATTERNS:
@@ -352,20 +373,36 @@ class InsurerProductSearcher:
                     if hub_url in probed:
                         continue
                     probed.add(hub_url)
-
                     html = self._get_text(hub_url)
                     if not html:
                         continue
-
                     found = self._extract_pdf_links(html, hub_url)
                     if found:
-                        LOGGER.info(
-                            "Doc hub %s → %d PDFs", hub_url, len(found)
-                        )
+                        LOGGER.info("Doc hub %s → %d PDFs", hub_url, len(found))
                         docs.extend(found)
-                        break  # found a working hub for this pattern level
+                        break  # found a working pattern for this category/segment
 
-        return docs
+        # Always probe the generic hubs regardless of category
+        for generic in ("/downloads/", "/download/", "/documents/", "/resources/"):
+            hub_url = root + generic
+            if hub_url in probed:
+                continue
+            probed.add(hub_url)
+            html = self._get_text(hub_url)
+            if html:
+                found = self._extract_pdf_links(html, hub_url)
+                if found:
+                    LOGGER.info("Generic hub %s → %d PDFs", hub_url, len(found))
+                    docs.extend(found)
+
+        # Deduplicate by URL
+        seen_urls: set = set()
+        unique: List[DiscoveredDocument] = []
+        for d in docs:
+            if d.url not in seen_urls:
+                seen_urls.add(d.url)
+                unique.append(d)
+        return unique
 
     def _extract_pdf_links(
         self, html: str, page_url: str
@@ -376,35 +413,35 @@ class InsurerProductSearcher:
 
         for a in soup.find_all("a", href=True):
             href: str = a["href"].strip()
-            if not (href.lower().endswith(".pdf") or "/pdf/" in href.lower()):
-                continue
             abs_url = urljoin(page_url, href)
+            lower = abs_url.lower()
+            # Accept PDFs and also doc/docx
+            if not (lower.endswith(".pdf") or lower.endswith(".doc") or lower.endswith(".docx")):
+                if "/pdf/" not in lower:
+                    continue
             if abs_url in seen:
                 continue
             seen.add(abs_url)
 
-            filename = abs_url.split("/")[-1].lower().replace("%20", "-")
-            doc_type = self._classify_document(
-                filename, a.get_text(strip=True)
-            )
+            filename = abs_url.split("?")[0].split("/")[-1].lower().replace("%20", "-")
+            anchor_text = a.get_text(strip=True)
+            doc_type = self._classify_document(filename, anchor_text)
             product_slug = self._slug_from_filename(filename)
 
-            docs.append(
-                DiscoveredDocument(
-                    url=abs_url,
-                    doc_type=doc_type,
-                    filename=filename,
-                    product_slug=product_slug,
-                )
-            )
+            docs.append(DiscoveredDocument(
+                url=abs_url,
+                doc_type=doc_type,
+                filename=filename,
+                product_slug=product_slug,
+            ))
         return docs
 
-    def _classify_document(self, filename: str, anchor_text: str) -> str:
+    def _classify_document(self, filename: str, anchor_text: str = "") -> str:
         combined = (filename + " " + anchor_text).lower()
         for doc_type, hints in DOCUMENT_TYPE_HINTS.items():
             if any(h in combined for h in hints):
                 return doc_type
-        return "policy_wording"  # sensible default for insurance PDFs
+        return "policy_wording"  # Default: insurance PDFs are usually policy wordings
 
     def _slug_from_filename(self, filename: str) -> str:
         name = re.sub(r"\.(pdf|doc|docx)$", "", filename, flags=re.IGNORECASE)
@@ -420,25 +457,34 @@ class InsurerProductSearcher:
         hub_docs: List[DiscoveredDocument],
     ) -> None:
         for doc in hub_docs:
-            best_product = self._best_match_product(doc, products)
-            if best_product:
-                best_product.documents.append(doc)
+            best = self._best_match_product(doc, products)
+            if best:
+                best.documents.append(doc)
 
     def _best_match_product(
         self, doc: DiscoveredDocument, products: List[DiscoveredProduct]
     ) -> Optional[DiscoveredProduct]:
-        # Exact slug match first
+        if not products:
+            return None
+
+        # Exact slug containment match first
         for p in products:
             if p.slug in doc.product_slug or doc.product_slug in p.slug:
                 return p
-        # Keyword overlap fallback
-        doc_words = set(doc.product_slug.split("-"))
+
+        # Keyword overlap (≥2 shared tokens)
+        doc_words = set(doc.product_slug.split("-")) - {"policy", "wording", "brochure", "pdf", "doc"}
         best, best_score = None, 0
         for p in products:
             prod_words = set(p.slug.split("-"))
             score = len(doc_words & prod_words)
             if score > best_score and score >= 2:
                 best, best_score = p, score
+
+        # If only one product, assign all unmatched docs to it
+        if best is None and len(products) == 1:
+            return products[0]
+
         return best
 
     # ── Step 5: Enrich from product pages ─────────────────────────────────────
@@ -455,69 +501,98 @@ class InsurerProductSearcher:
                 continue
 
             inline_docs = self._extract_pdf_links(html, product.url)
+            existing_urls = {d.url for d in product.documents}
             for doc in inline_docs:
-                if not any(d.url == doc.url for d in product.documents):
+                if doc.url not in existing_urls:
                     doc.product_slug = product.slug
                     product.documents.append(doc)
+                    existing_urls.add(doc.url)
 
             time.sleep(self.delay)
 
-    # ── HTTP helpers ──────────────────────────────────────────────────────────
+    # ── HTTP / Browser helpers ────────────────────────────────────────────────
+
+    def _get_text_variants(self, root: str, path: str) -> Optional[str]:
+        """Try a path with and without trailing slash."""
+        for variant in (path.rstrip("/") + "/", path.rstrip("/")):
+            html = self._get_text(root + variant)
+            if html:
+                return html
+        return None
 
     def _get_text(self, url: str) -> Optional[str]:
-        """Fetch page text, trying Playwright first if enabled, then falling back to requests."""
-        # If browser is enabled and this is an HTML page, try Playwright first
-        if self.use_browser and (url.endswith((".html", "/")) or not url.endswith((".xml", ".pdf"))):
-            text = self._get_text_with_browser(url)
-            if text:
-                return text
-            LOGGER.debug("Playwright fetch failed, falling back to requests: %s", url)
+        """Fetch URL content, trying Playwright first if enabled."""
+        if self.use_browser and not url.endswith((".pdf", ".doc", ".docx")):
+            html = self._get_text_with_browser(url)
+            if html:
+                return html
+            LOGGER.debug("Playwright failed, falling back to requests: %s", url)
 
-        # Fallback to requests
+        return self._get_text_with_requests(url)
+
+    def _get_text_with_requests(self, url: str) -> Optional[str]:
         try:
             r = self._session.get(url, timeout=self.timeout, allow_redirects=True)
             ct = r.headers.get("Content-Type", "")
-            if r.status_code == 200 and ("html" in ct or url.endswith(".xml")):
+            if r.status_code == 200 and ("html" in ct or "xml" in ct or url.endswith(".xml")):
                 time.sleep(self.delay)
                 return r.text
             if r.status_code == 403:
-                LOGGER.debug("BOT-BLOCKED (403) %s", url)
-            elif r.status_code != 200:
-                LOGGER.debug("HTTP %d %s", r.status_code, url)
+                LOGGER.debug("BOT-BLOCKED 403: %s", url)
+            elif r.status_code not in (200, 404, 301, 302):
+                LOGGER.debug("HTTP %d: %s", r.status_code, url)
         except requests.exceptions.ConnectionError:
-            LOGGER.debug("UNREACHABLE %s", url)
+            LOGGER.debug("UNREACHABLE: %s", url)
         except Exception as exc:
-            LOGGER.debug("GET %s failed: %s", url, exc)
+            LOGGER.debug("GET failed %s: %s", url, exc)
         return None
 
     def _get_text_with_browser(self, url: str) -> Optional[str]:
-        """Fetch page text using Playwright headless browser (bypasses bot detection)."""
+        """Fetch page with Playwright Chromium to bypass bot protection."""
         if not HAS_PLAYWRIGHT:
             return None
-
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-                context = browser.new_context(
-                    user_agent=UA,
-                    viewport={"width": 1280, "height": 720},
+                browser = p.chromium.launch(
+                    headless=True,
+                    executable_path=self._chromium,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-accelerated-2d-canvas",
+                        "--no-first-run",
+                        "--no-zygote",
+                        "--disable-gpu",
+                    ],
                 )
-                page = context.new_page()
-
+                ctx = browser.new_context(
+                    user_agent=UA,
+                    viewport={"width": 1280, "height": 800},
+                    locale="en-IN",
+                    ignore_https_errors=True,
+                    extra_http_headers={
+                        "Accept-Language": "en-IN,en-US;q=0.9,en;q=0.8",
+                    },
+                )
+                page = ctx.new_page()
                 try:
-                    page.goto(url, timeout=self.timeout * 1000, wait_until="domcontentloaded")
-                    time.sleep(self.delay)
-                    html = page.content()
-                    return html if html else None
+                    resp = page.goto(url, timeout=self.timeout * 1000, wait_until="domcontentloaded")
+                    if resp and resp.status == 200:
+                        time.sleep(self.delay)
+                        return page.content()
+                    LOGGER.debug("Browser got HTTP %s for %s", resp.status if resp else "?", url)
+                except Exception as exc:
+                    LOGGER.debug("Browser navigation failed %s: %s", url, exc)
                 finally:
-                    context.close()
+                    ctx.close()
                     browser.close()
         except Exception as exc:
-            LOGGER.debug("Playwright fetch failed for %s: %s", url, exc)
-            return None
+            LOGGER.debug("Browser launch failed: %s", exc)
+        return None
 
     def _probe(self, url: str) -> int:
-        """Return HTTP status code for a URL (for dry-run / QC reporting)."""
+        """Return HTTP status code for a URL (HEAD-only, for QC dry runs)."""
         try:
             r = self._session.head(url, timeout=self.timeout, allow_redirects=True)
             return r.status_code
@@ -529,68 +604,26 @@ class InsurerProductSearcher:
 
 # ─── Batch runner ─────────────────────────────────────────────────────────────
 
-def probe_insurer_urls(insurer: Insurer, timeout: int = 10) -> Dict:
-    """
-    Dry-run: probe all URL patterns for one insurer with HEAD requests.
-    Returns a dict of {url: http_status} for every candidate URL.
-    """
-    searcher = InsurerProductSearcher(timeout=timeout)
-    root = insurer.website_url.rstrip("/")
-    probes: Dict[str, int] = {}
-
-    # Sitemap candidates
-    for path in ["/sitemap.xml", "/sitemap_index.xml", "/robots.txt"]:
-        url = root + path
-        probes[url] = searcher._probe(url)
-
-    # Category pages
-    for cat, segs in CATEGORY_SEGMENTS.items():
-        for seg in segs[:1]:  # just first segment per category
-            url = f"{root}/{seg}/"
-            probes[url] = searcher._probe(url)
-
-    # Document hub candidates (first 2 category-segments per category)
-    for cat, segs in CATEGORY_SEGMENTS.items():
-        for seg in segs[:2]:
-            for pattern in DOC_HUB_PATTERNS[:4]:
-                url = root + pattern.format(cat=seg)
-                if url not in probes:
-                    probes[url] = searcher._probe(url)
-
-    return {
-        "insurer_id": insurer.insurer_id,
-        "insurer_name": insurer.name,
-        "website": root,
-        "probes": probes,
-        "accessible": sum(1 for s in probes.values() if s == 200),
-        "blocked_403": sum(1 for s in probes.values() if s == 403),
-        "not_found_404": sum(1 for s in probes.values() if s == 404),
-        "unreachable": sum(1 for s in probes.values() if s in (0, -1)),
-    }
-
-
 def run_product_search_all(
     insurers: List[Insurer],
-    timeout: int = 15,
+    timeout: int = 20,
     delay: float = 0.5,
     max_insurers: Optional[int] = None,
     use_browser: bool = True,
 ) -> List[SearchResult]:
     """Run product search on every insurer and return results."""
     if use_browser and not HAS_PLAYWRIGHT:
-        LOGGER.warning("Playwright not available, falling back to requests")
+        LOGGER.warning("Playwright not installed; falling back to requests")
         use_browser = False
 
     searcher = InsurerProductSearcher(timeout=timeout, delay=delay, use_browser=use_browser)
-    results: List[SearchResult] = []
-
     subset = insurers[:max_insurers] if max_insurers else insurers
-    total = len(subset)
 
+    results: List[SearchResult] = []
     for i, insurer in enumerate(subset, 1):
         LOGGER.info(
-            "[%d/%d] Searching %s (%s) [browser=%s]",
-            i, total, insurer.name, insurer.website_url, use_browser,
+            "[%d/%d] %s  %s  [browser=%s]",
+            i, len(subset), insurer.name, insurer.website_url, use_browser,
         )
         try:
             result = searcher.search(insurer)
@@ -607,40 +640,75 @@ def run_product_search_all(
     return results
 
 
-# ─── QC Reporter ──────────────────────────────────────────────────────────────
+# ─── QC helpers ───────────────────────────────────────────────────────────────
+
+def probe_insurer_urls(insurer: Insurer, timeout: int = 10) -> Dict:
+    """
+    Dry-run: HEAD-probe all candidate URLs for one insurer.
+    Returns {url: http_status} for every candidate.
+    """
+    searcher = InsurerProductSearcher(timeout=timeout)
+    root = insurer.website_url.rstrip("/")
+    probes: Dict[str, int] = {}
+
+    for path in ("/sitemap.xml", "/sitemap_index.xml", "/robots.txt"):
+        probes[root + path] = searcher._probe(root + path)
+
+    for cat, segs in CATEGORY_SEGMENTS.items():
+        for seg in segs[:1]:
+            for variant in (f"/{seg}/", f"/{seg}"):
+                url = root + variant
+                if url not in probes:
+                    probes[url] = searcher._probe(url)
+
+    for cat, segs in CATEGORY_SEGMENTS.items():
+        for seg in segs[:1]:
+            for pattern in DOC_HUB_PATTERNS[:6]:
+                url = root + pattern.format(cat=seg)
+                if url not in probes:
+                    probes[url] = searcher._probe(url)
+
+    return {
+        "insurer_id": insurer.insurer_id,
+        "insurer_name": insurer.name,
+        "website": root,
+        "probes": probes,
+        "accessible":     sum(1 for s in probes.values() if s == 200),
+        "blocked_403":    sum(1 for s in probes.values() if s == 403),
+        "not_found_404":  sum(1 for s in probes.values() if s == 404),
+        "unreachable":    sum(1 for s in probes.values() if s in (0, -1)),
+    }
+
 
 def qc_report(results: List[SearchResult]) -> Dict:
     """Aggregate QC metrics across all search results."""
-    total_insurers = len(results)
-    crawled = [r for r in results if not r.errors]
-    no_url = [r for r in results if "no_website_url" in r.errors]
-    errored = [r for r in results if r.errors and "no_website_url" not in r.errors]
-
+    crawled      = [r for r in results if not r.errors]
+    no_url       = [r for r in results if "no_website_url" in r.errors]
+    errored      = [r for r in results if r.errors and "no_website_url" not in r.errors]
     all_products = [p for r in results for p in r.products]
-    products_with_docs = [p for p in all_products if p.documents]
+    with_docs    = [p for p in all_products if p.documents]
 
     by_category: Dict[str, int] = {}
     for p in all_products:
         by_category[p.category] = by_category.get(p.category, 0) + 1
 
     return {
-        "total_insurers": total_insurers,
-        "insurers_crawled": len(crawled),
-        "insurers_no_url": len(no_url),
-        "insurers_errored": len(errored),
-        "total_products": len(all_products),
-        "products_with_docs": len(products_with_docs),
-        "doc_coverage_pct": (
-            round(len(products_with_docs) / max(len(all_products), 1) * 100, 1)
-        ),
-        "by_category": by_category,
+        "total_insurers":     len(results),
+        "insurers_crawled":   len(crawled),
+        "insurers_no_url":    len(no_url),
+        "insurers_errored":   len(errored),
+        "total_products":     len(all_products),
+        "products_with_docs": len(with_docs),
+        "doc_coverage_pct":   round(len(with_docs) / max(len(all_products), 1) * 100, 1),
+        "by_category":        by_category,
         "per_insurer": [
             {
-                "insurer": r.insurer_name,
-                "products": len(r.products),
-                "docs": sum(len(p.documents) for p in r.products),
-                "categories": list({p.category for p in r.products}),
-                "errors": r.errors,
+                "insurer":    r.insurer_name,
+                "products":   len(r.products),
+                "docs":       sum(len(p.documents) for p in r.products),
+                "categories": sorted({p.category for p in r.products}),
+                "errors":     r.errors,
+                "stats":      r.stats,
             }
             for r in results
         ],
