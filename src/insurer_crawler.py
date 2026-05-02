@@ -182,6 +182,8 @@ def extract_primary_url(*text_candidates: str) -> str:
             url = url.rstrip(").,;")
             if url.lower().startswith("www."):
                 url = f"https://{url}"
+            elif url.lower().startswith("http://"):
+                url = url.replace("http://", "https://", 1)
             return url
     return ""
 
@@ -198,8 +200,14 @@ def build_normalized_rows(
 
         website_text = normalized.get("website")
         contacts_text = normalized.get("contacts")
-        normalized["website_url"] = extract_primary_url(website_text, contacts_text)
+        website_url = extract_primary_url(website_text, contacts_text)
 
+        # For life insurers, check insurer_email field if website_url is empty
+        if not website_url and category.key == "life":
+            insurer_email = normalized.get("insurer_email")
+            website_url = extract_primary_url(insurer_email)
+
+        normalized["website_url"] = website_url
         normalized_rows.append(normalized)
     return normalized_rows
 

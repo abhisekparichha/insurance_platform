@@ -392,7 +392,30 @@ class InsurerProductCrawler:
 
     def _is_potential_product_name(self, value: str) -> bool:
         lowercase = value.lower()
-        return any(keyword in lowercase for keyword in self.PRODUCT_KEYWORDS) and len(value) > 5
+        if not any(keyword in lowercase for keyword in self.PRODUCT_KEYWORDS):
+            return False
+        if len(value) <= 5:
+            return False
+
+        # Reject FAQ-style questions (e.g., "What is car insurance?")
+        if "?" in value:
+            return False
+
+        # Reject navigation/header-like texts
+        excluded_patterns = [
+            "insurance company", "insurance agent", "insurance broker",
+            "become a", "certifi", "award", "year", "number 1",
+            "best", "top", "leading", "click here", "learn more",
+            "visit", "contact", "about us", "we are", "our",
+        ]
+        if any(pattern in lowercase for pattern in excluded_patterns):
+            return False
+
+        # Reject template strings (e.g., "{{abs.isPartner")
+        if "{{" in value or "{%" in value:
+            return False
+
+        return True
 
     def _infer_document_type(self, anchor_text: str, href: str = "") -> str:
         text = (anchor_text or "").lower()
@@ -436,10 +459,11 @@ class InsurerProductCrawler:
                 tags.append(category)
         return tags
 
-    def _classify_category(self, title: str, page_text: str) -> str:
-        combined = f"{title} {page_text}".lower()
+    def _classify_category(self, title: str, page_text: str = "") -> str:
+        # Classify based on heading title only (not full page text which causes over-matching)
+        title_lower = title.lower()
         for category, keywords in self.CATEGORY_KEYWORDS.items():
-            if any(keyword in combined for keyword in keywords):
+            if any(keyword in title_lower for keyword in keywords):
                 return category
         return "other"
 

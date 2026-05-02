@@ -1,9 +1,9 @@
 {
   "product": {
-    "insurer": "Guardian Health",
-    "planName": "Guardian Super Top-Up",
+    "insurer": "Star Health and Allied Insurance Company",
+    "planName": "Star Super Top-Up",
     "variant": "Aggregate 5L",
-    "uin": "GRDTPAGG2024V02",
+    "uin": "STRTPUAGG2024V01",
     "policyType": "Individual",
     "isTopUp": true,
     "geography": "IN"
@@ -109,7 +109,7 @@
   },
   "provenance": {
     "sourceType": "insurer_site",
-    "sourceName": "Guardian Super Top-Up Product Page",
+    "sourceName": "Star Super Top-Up Product Page",
     "sourceDate": "2025-08-15",
     "extractionConfidence": 0.8
   },

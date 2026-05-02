@@ -11,5 +11,7 @@ data_documents/
 !/server/data/
 *.db
 *.sqlite
+__pycache__/
+*.pyc
 pnpm-debug.log*
 *.log

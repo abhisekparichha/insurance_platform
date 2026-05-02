@@ -12,6 +12,7 @@ WHITESPACE_RE = re.compile(r"\s+")
 HINDI_RE = re.compile(r"[\u0900-\u097F]+")
 NON_WORD_RE = re.compile(r"[^\w\s-]")
 HYPHEN_RE = re.compile(r"[-\s]+")
+ARTIFACT_RE = re.compile(r"^[().\s\d,]*\s*")
 
 
 def normalize_whitespace(value: str) -> str:
@@ -27,8 +28,10 @@ def strip_hindi(value: str) -> str:
 
 
 def clean_text(value: str) -> str:
-    """Normalize text by trimming whitespace and removing Hindi content."""
-    return normalize_whitespace(strip_hindi(value))
+    """Normalize text by trimming whitespace, removing Hindi content, and stripping formatting artifacts."""
+    value = strip_hindi(value)
+    value = ARTIFACT_RE.sub("", value)
+    return normalize_whitespace(value)
 
 
 def slugify(value: str) -> str:
