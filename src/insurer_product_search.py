@@ -28,6 +28,14 @@ from bs4 import BeautifulSoup
 from .models import Insurer, Product, ProductDocument
 from .utils import slugify
 
+# Try to import Playwright for bot-protection bypass
+try:
+    from playwright.sync_api import sync_playwright, Page
+    HAS_PLAYWRIGHT = True
+except ImportError:
+    HAS_PLAYWRIGHT = False
+    Page = None  # type: ignore
+
 LOGGER = logging.getLogger(__name__)
 
 UA = (
@@ -119,10 +127,12 @@ class InsurerProductSearcher:
         timeout: int = 15,
         delay: float = 0.5,
         dry_run: bool = False,
+        use_browser: bool = False,
     ) -> None:
         self.timeout = timeout
         self.delay = delay
         self.dry_run = dry_run  # when True: probe URLs but don't parse HTML
+        self.use_browser = use_browser and HAS_PLAYWRIGHT
         self._session = requests.Session()
         self._session.headers.update({
             "User-Agent": UA,
@@ -130,6 +140,8 @@ class InsurerProductSearcher:
             "Accept-Language": "en-US,en;q=0.5",
             "Accept-Encoding": "gzip, deflate, br",
         })
+        self._browser_context = None
+        self._browser_page = None
 
     # ── Public entry point ────────────────────────────────────────────────────
 
@@ -453,6 +465,15 @@ class InsurerProductSearcher:
     # ── HTTP helpers ──────────────────────────────────────────────────────────
 
     def _get_text(self, url: str) -> Optional[str]:
+        """Fetch page text, trying Playwright first if enabled, then falling back to requests."""
+        # If browser is enabled and this is an HTML page, try Playwright first
+        if self.use_browser and (url.endswith((".html", "/")) or not url.endswith((".xml", ".pdf"))):
+            text = self._get_text_with_browser(url)
+            if text:
+                return text
+            LOGGER.debug("Playwright fetch failed, falling back to requests: %s", url)
+
+        # Fallback to requests
         try:
             r = self._session.get(url, timeout=self.timeout, allow_redirects=True)
             ct = r.headers.get("Content-Type", "")
@@ -468,6 +489,32 @@ class InsurerProductSearcher:
         except Exception as exc:
             LOGGER.debug("GET %s failed: %s", url, exc)
         return None
+
+    def _get_text_with_browser(self, url: str) -> Optional[str]:
+        """Fetch page text using Playwright headless browser (bypasses bot detection)."""
+        if not HAS_PLAYWRIGHT:
+            return None
+
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+                context = browser.new_context(
+                    user_agent=UA,
+                    viewport={"width": 1280, "height": 720},
+                )
+                page = context.new_page()
+
+                try:
+                    page.goto(url, timeout=self.timeout * 1000, wait_until="domcontentloaded")
+                    time.sleep(self.delay)
+                    html = page.content()
+                    return html if html else None
+                finally:
+                    context.close()
+                    browser.close()
+        except Exception as exc:
+            LOGGER.debug("Playwright fetch failed for %s: %s", url, exc)
+            return None
 
     def _probe(self, url: str) -> int:
         """Return HTTP status code for a URL (for dry-run / QC reporting)."""
@@ -527,9 +574,14 @@ def run_product_search_all(
     timeout: int = 15,
     delay: float = 0.5,
     max_insurers: Optional[int] = None,
+    use_browser: bool = True,
 ) -> List[SearchResult]:
     """Run product search on every insurer and return results."""
-    searcher = InsurerProductSearcher(timeout=timeout, delay=delay)
+    if use_browser and not HAS_PLAYWRIGHT:
+        LOGGER.warning("Playwright not available, falling back to requests")
+        use_browser = False
+
+    searcher = InsurerProductSearcher(timeout=timeout, delay=delay, use_browser=use_browser)
     results: List[SearchResult] = []
 
     subset = insurers[:max_insurers] if max_insurers else insurers
@@ -537,8 +589,8 @@ def run_product_search_all(
 
     for i, insurer in enumerate(subset, 1):
         LOGGER.info(
-            "[%d/%d] Searching %s (%s)",
-            i, total, insurer.name, insurer.website_url,
+            "[%d/%d] Searching %s (%s) [browser=%s]",
+            i, total, insurer.name, insurer.website_url, use_browser,
         )
         try:
             result = searcher.search(insurer)
