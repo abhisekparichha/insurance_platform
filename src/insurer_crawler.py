@@ -182,6 +182,8 @@ def extract_primary_url(*text_candidates: str) -> str:
             url = url.rstrip(").,;")
             if url.lower().startswith("www."):
                 url = f"https://{url}"
+            elif url.lower().startswith("http://"):
+                url = url.replace("http://", "https://", 1)
             return url
     return ""
 
