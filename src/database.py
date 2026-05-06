@@ -260,9 +260,9 @@ class InsuranceRepository:
                     product_id=excluded.product_id,
                     document_type=excluded.document_type,
                     source_url=excluded.source_url,
-                    local_path=excluded.local_path,
-                    content_hash=excluded.content_hash,
-                    extracted_text=excluded.extracted_text,
+                    local_path=COALESCE(product_documents.local_path, excluded.local_path),
+                    content_hash=COALESCE(product_documents.content_hash, excluded.content_hash),
+                    extracted_text=COALESCE(product_documents.extracted_text, excluded.extracted_text),
                     metadata_json=excluded.metadata_json,
                     updated_at=excluded.updated_at
                 """,
@@ -341,6 +341,22 @@ class InsuranceRepository:
                 (content_hash, self._timestamp(), document_id),
             )
 
+    def update_document_on_success(
+        self, document_id: str, local_path: Path, content_hash: Optional[str]
+    ) -> None:
+        """Mark a document download as successful, recording path and hash atomically."""
+        now = self._timestamp()
+        with self.transaction() as cursor:
+            cursor.execute(
+                """
+                UPDATE product_documents
+                SET local_path=?, content_hash=?, fetch_status='success',
+                    fetch_attempts=fetch_attempts+1, last_fetched_at=?, updated_at=?
+                WHERE document_id=?
+                """,
+                (str(local_path), content_hash, now, now, document_id),
+            )
+
     def log_qc_check(
         self, entity_id: str, check_type: str, result: str, detail: str = ""
     ) -> None:
@@ -404,6 +420,43 @@ class InsuranceRepository:
             (product_id,),
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_documents_pending_download(self, max_attempts: int = 3) -> List[dict]:
+        """Return documents that still need to be downloaded, respecting retry cap."""
+        rows = self.conn.execute(
+            """
+            SELECT document_id, insurer_id, product_id, source_url,
+                   document_type, local_path, fetch_attempts
+            FROM product_documents
+            WHERE fetch_status = 'pending'
+              AND fetch_attempts < ?
+            ORDER BY updated_at ASC
+            """,
+            (max_attempts,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_downloaded_by_url(self, source_url: str) -> Optional[dict]:
+        """Return local_path and content_hash if source_url was already downloaded."""
+        row = self.conn.execute(
+            """
+            SELECT local_path, content_hash
+            FROM product_documents
+            WHERE source_url = ? AND fetch_status = 'success'
+              AND local_path IS NOT NULL
+            LIMIT 1
+            """,
+            (source_url,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def insurer_has_products(self, insurer_id: str) -> bool:
+        """Return True if the insurer already has products in the database."""
+        row = self.conn.execute(
+            "SELECT 1 FROM products WHERE insurer_id = ? LIMIT 1",
+            (insurer_id,),
+        ).fetchone()
+        return row is not None
 
     def get_products_for_qc(self, days_since_last_check: int = 1) -> List[dict]:
         """Return active products whose QC check is overdue."""
