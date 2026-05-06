@@ -14,6 +14,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { existsSync } from "fs";
 import { readFile } from "fs/promises";
+import { createRequire } from "module";
+
+const _require = createRequire(import.meta.url);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -92,10 +95,8 @@ const CATEGORY_META: Record<string, { label: string; icon: string; coverageType:
 function tryOpenDb(): import("better-sqlite3").Database | null {
   if (!existsSync(DB_PATH)) return null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Database = require("better-sqlite3") as typeof import("better-sqlite3");
+    const Database = _require("better-sqlite3") as typeof import("better-sqlite3");
     const db = new Database(DB_PATH, { readonly: true });
-    db.pragma("journal_mode = WAL");
     return db;
   } catch {
     return null;
@@ -104,7 +105,7 @@ function tryOpenDb(): import("better-sqlite3").Database | null {
 
 function dbHasActiveProducts(db: import("better-sqlite3").Database): boolean {
   const row = db.prepare(
-    "SELECT COUNT(*) AS n FROM products WHERE status IN ('active','stale')"
+    "SELECT COUNT(*) AS n FROM products"
   ).get() as { n: number };
   return row.n > 0;
 }
@@ -133,7 +134,7 @@ function mapDbRow(row: Record<string, unknown>): ProductDetail {
   const meta = CATEGORY_META[rawCategory] ?? { label: rawCategory, icon: "📋", coverageType: "Unknown" };
   const tags = safeJson<string[]>(row.tags_json as string, []);
   const qcStatus = (row.qc_status as string | undefined) ?? "unverified";
-  const status   = (row.status    as string | undefined) ?? "active";
+  const status   = "active";
 
   return {
     id:              row.product_id as string,
@@ -166,7 +167,6 @@ function buildFromDb(db: import("better-sqlite3").Database): SeedData {
       `SELECT p.*, i.name AS insurer_name, i.website_url AS insurer_website
        FROM products p
        JOIN insurers i ON p.insurer_id = i.insurer_id
-       WHERE p.status IN ('active', 'stale')
        ORDER BY p.updated_at DESC`
     )
     .all() as Record<string, unknown>[];

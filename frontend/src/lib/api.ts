@@ -11,17 +11,17 @@ import {
   mockFetchInsurers,
   mockFetchProductDetail,
   mockFetchProducts,
-  mockFetchSearchSuggestions
+  mockFetchSearchSuggestions,
+  mockFetchInsurerProfile,
+  mockFetchInsurerProducts,
+  mockFetchAllInsurers,
 } from './mockData';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 const FORCE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
-const useMocks = FORCE_MOCKS || !API_BASE_URL;
+const useMocks = FORCE_MOCKS || import.meta.env.VITE_API_BASE_URL === undefined;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_BASE_URL) {
-    throw new Error('API base URL is not defined. Provide VITE_API_BASE_URL or enable mocks.');
-  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
@@ -77,6 +77,21 @@ export async function fetchProductDetail(productId: string): Promise<ProductDeta
 export async function fetchSearchSuggestions(term: string): Promise<SearchSuggestion[]> {
   if (useMocks) return mockFetchSearchSuggestions(term);
   return request<SearchSuggestion[]>(`/search/suggestions${buildQueryString({ search: term })}`);
+}
+
+export async function fetchInsurerProfile(insurerId: string) {
+  if (useMocks) return mockFetchInsurerProfile(insurerId);
+  return request<{ id: string; name: string; rating: number; totalProducts: number } | null>(`/insurers/${insurerId}`);
+}
+
+export async function fetchInsurerProducts(insurerId: string): Promise<ProductCollectionResponse> {
+  if (useMocks) return mockFetchInsurerProducts(insurerId);
+  return request<ProductCollectionResponse>(`/insurers/${insurerId}/products`);
+}
+
+export async function fetchAllInsurers() {
+  if (useMocks) return mockFetchAllInsurers();
+  return request<{ id: string; name: string; rating: number; totalProducts: number }[]>('/insurers');
 }
 
 export const apiConfig = {
