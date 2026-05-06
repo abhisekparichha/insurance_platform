@@ -1,0 +1,82 @@
+{
+  "total_insurers": 5,
+  "insurers_crawled": 5,
+  "insurers_no_url": 0,
+  "insurers_errored": 0,
+  "total_products": 0,
+  "products_with_docs": 0,
+  "doc_coverage_pct": 0.0,
+  "by_category": {},
+  "per_insurer": [
+    {
+      "insurer": "Bajaj General Insurance Limited",
+      "products": 0,
+      "docs": 0,
+      "categories": [],
+      "errors": [],
+      "stats": {
+        "sitemap_products": 0,
+        "category_page_products": 0,
+        "hub_docs": 0,
+        "total_products": 0,
+        "products_with_docs": 0
+      }
+    },
+    {
+      "insurer": "HDFC ERGO General Insurance Company Limited",
+      "products": 0,
+      "docs": 0,
+      "categories": [],
+      "errors": [],
+      "stats": {
+        "sitemap_products": 0,
+        "category_page_products": 0,
+        "hub_docs": 0,
+        "total_products": 0,
+        "products_with_docs": 0
+      }
+    },
+    {
+      "insurer": "ICICI LOMBARD General Insurance Company Limited",
+      "products": 0,
+      "docs": 0,
+      "categories": [],
+      "errors": [],
+      "stats": {
+        "sitemap_products": 0,
+        "category_page_products": 0,
+        "hub_docs": 0,
+        "total_products": 0,
+        "products_with_docs": 0
+      }
+    },
+    {
+      "insurer": "Star Health & Allied Insurance Co.Ltd.",
+      "products": 0,
+      "docs": 0,
+      "categories": [],
+      "errors": [],
+      "stats": {
+        "sitemap_products": 0,
+        "category_page_products": 0,
+        "hub_docs": 0,
+        "total_products": 0,
+        "products_with_docs": 0
+      }
+    },
+    {
+      "insurer": "HDFC Life Insurance Company Limited",
+      "products": 0,
+      "docs": 0,
+      "categories": [],
+      "errors": [],
+      "stats": {
+        "sitemap_products": 0,
+        "category_page_products": 0,
+        "hub_docs": 0,
+        "total_products": 0,
+        "products_with_docs": 0
+      }
+    }
+  ]
+}
